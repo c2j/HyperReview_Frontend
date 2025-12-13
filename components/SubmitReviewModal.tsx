@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { ShieldCheck, AlertTriangle, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, AlertTriangle, CheckCircle2, XCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { getQualityGates } from '../api/client';
+import type { QualityGate } from '../api/types';
 
 interface SubmitReviewModalProps {
   onClose: () => void;
@@ -10,6 +12,16 @@ interface SubmitReviewModalProps {
 const SubmitReviewModal: React.FC<SubmitReviewModalProps> = ({ onClose, onSubmit }) => {
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [gates, setGates] = useState<QualityGate[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+      setLoading(true);
+      getQualityGates()
+        .then(setGates)
+        .catch(console.error)
+        .finally(() => setLoading(false));
+  }, []);
 
   const handleSubmit = () => {
     setIsSubmitting(true);
@@ -30,28 +42,27 @@ const SubmitReviewModal: React.FC<SubmitReviewModalProps> = ({ onClose, onSubmit
 
       <div>
         <h4 className="text-[10px] uppercase font-bold text-gray-500 mb-2">{t('modal.submit.gates')}</h4>
-        <div className="space-y-2">
-             <div className="flex items-center justify-between p-2 bg-editor-line/20 rounded border border-editor-line/50">
-                <div className="flex items-center gap-2">
-                    <CheckCircle2 size={14} className="text-editor-success" />
-                    <span className="text-xs text-editor-fg">CI Pipeline</span>
+        <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+             {loading ? (
+                <div className="flex flex-col items-center justify-center py-4 text-gray-500 gap-2">
+                    <Loader2 size={16} className="animate-spin text-editor-accent" />
+                    <span className="text-xs">Checking gates...</span>
                 </div>
-                <span className="text-xs text-editor-success font-mono">PASSED</span>
-             </div>
-             <div className="flex items-center justify-between p-2 bg-editor-line/20 rounded border border-editor-line/50">
-                <div className="flex items-center gap-2">
-                    <CheckCircle2 size={14} className="text-editor-success" />
-                    <span className="text-xs text-editor-fg">Unit Tests</span>
-                </div>
-                <span className="text-xs text-editor-success font-mono">100% (42/42)</span>
-             </div>
-              <div className="flex items-center justify-between p-2 bg-editor-line/20 rounded border border-editor-line/50">
-                <div className="flex items-center gap-2">
-                    <AlertTriangle size={14} className="text-editor-warning" />
-                    <span className="text-xs text-editor-fg">Code Coverage</span>
-                </div>
-                <span className="text-xs text-editor-warning font-mono">82% (Target 85%)</span>
-             </div>
+             ) : (
+                gates.map(gate => (
+                    <div key={gate.id} className="flex items-center justify-between p-2 bg-editor-line/20 rounded border border-editor-line/50">
+                        <div className="flex items-center gap-2">
+                            {gate.status === 'passed' && <CheckCircle2 size={14} className="text-editor-success" />}
+                            {gate.status === 'warning' && <AlertTriangle size={14} className="text-editor-warning" />}
+                            {gate.status === 'failed' && <XCircle size={14} className="text-editor-error" />}
+                            <span className="text-xs text-editor-fg">{gate.name}</span>
+                        </div>
+                        <span className={`text-xs font-mono ${gate.status === 'passed' ? 'text-editor-success' : gate.status === 'warning' ? 'text-editor-warning' : 'text-editor-error'}`}>
+                            {gate.message}
+                        </span>
+                    </div>
+                ))
+             )}
         </div>
       </div>
 
@@ -73,8 +84,8 @@ const SubmitReviewModal: React.FC<SubmitReviewModalProps> = ({ onClose, onSubmit
         <button onClick={onClose} className="px-4 py-1.5 rounded text-xs hover:bg-editor-line text-gray-300 transition-colors">{t('modal.submit.cancel')}</button>
         <button 
           onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="px-4 py-1.5 rounded text-xs bg-editor-success text-white hover:bg-green-600 transition-colors font-medium shadow-sm flex items-center gap-2 min-w-[120px] justify-center"
+          disabled={isSubmitting || loading}
+          className="px-4 py-1.5 rounded text-xs bg-editor-success text-white hover:bg-green-600 transition-colors font-medium shadow-sm flex items-center gap-2 min-w-[120px] justify-center disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? t('modal.submit.submitting') : (
              <>

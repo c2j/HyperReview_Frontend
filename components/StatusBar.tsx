@@ -1,9 +1,17 @@
-import React from 'react';
-import { Cloud, Radio } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Cloud, Radio, Loader2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { getReviewStats } from '../api/client';
+import type { ReviewStats } from '../api/types';
 
 const StatusBar: React.FC = () => {
   const { t } = useTranslation();
+  const [stats, setStats] = useState<ReviewStats | null>(null);
+
+  useEffect(() => {
+      getReviewStats().then(setStats).catch(console.error);
+  }, []);
+
   return (
     <div className="h-[28px] bg-editor-accent text-white flex items-center px-4 justify-between text-[11px] select-none shrink-0 z-50 overflow-hidden whitespace-nowrap">
       {/* Left Section: Flexible, truncates path first */}
@@ -16,9 +24,20 @@ const StatusBar: React.FC = () => {
         <span className="opacity-80 truncate min-w-[50px]" title="/payment-service/feature/payment-retry">
             [/payment-service/feature/payment-retry]
         </span>
-        <span className="shrink-0">127 {t('statusbar.files')}</span>
-        <span className="shrink-0">→</span>
-        <span className="shrink-0 truncate">{t('statusbar.marked')} 47 (✗12 ⚠28 ❓7)</span>
+        
+        {stats ? (
+            <>
+                <span className="shrink-0">{stats.totalCount} {t('statusbar.files')}</span>
+                <span className="shrink-0">→</span>
+                <span className="shrink-0 truncate">
+                    {t('statusbar.marked')} {stats.reviewedCount} (✗{stats.severeCount} ⚠{stats.warningCount} ❓{stats.pendingCount})
+                </span>
+            </>
+        ) : (
+            <span className="shrink-0 opacity-50 flex items-center gap-1">
+                <Loader2 size={10} className="animate-spin" /> Loading stats...
+            </span>
+        )}
       </div>
 
       {/* Right Section: Stays visible mostly */}

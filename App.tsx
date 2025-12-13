@@ -141,6 +141,13 @@ const App: React.FC = () => {
     setBranchCompareModalOpen(true);
   };
 
+  // Back from Step 2 -> Step 1
+  const handleBackToRepoSelection = () => {
+      setBranchCompareModalOpen(false);
+      // Small delay for smooth visual transition
+      setTimeout(() => setOpenRepoModalOpen(true), 50);
+  };
+
   // Step 2: Select Branches -> Load UI
   const handleApplyBranchCompare = (base: string, head: string) => {
       setDiffContext({ base, head });
@@ -321,7 +328,8 @@ const App: React.FC = () => {
             currentHead={diffContext.head}
             isInitialSetup={isInitialSetup}
             onClose={() => { if(isRepoLoaded) setBranchCompareModalOpen(false); }} 
-            onApply={handleApplyBranchCompare} 
+            onApply={handleApplyBranchCompare}
+            onBack={handleBackToRepoSelection}
         />
       </Modal>
 

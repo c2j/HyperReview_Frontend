@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, CheckCircle2, Circle, AlertCircle, Plus } from 'lucide-react';
-import { MOCK_TASKS, MOCK_WATCHED } from '../constants';
 import { useTranslation } from '../i18n';
+import { getTasks } from '../api/client';
+import type { Task } from '../api/types';
 
 interface TaskTreeProps {
   activeTaskId: string;
@@ -16,6 +17,14 @@ const TaskTree: React.FC<TaskTreeProps> = ({ activeTaskId, onSelectTask, onActio
     watched: true,
     history: false
   });
+  
+  const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
+  const [watchedTasks, setWatchedTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    getTasks('pending').then(setPendingTasks).catch(console.error);
+    getTasks('watched').then(setWatchedTasks).catch(console.error);
+  }, []);
 
   const toggleSection = (key: keyof typeof sections) => {
     setSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -31,11 +40,11 @@ const TaskTree: React.FC<TaskTreeProps> = ({ activeTaskId, onSelectTask, onActio
             onClick={() => toggleSection('pending')}
           >
             {sections.pending ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            {t('tasktree.review_pending')} ({MOCK_TASKS.length})
+            {t('tasktree.review_pending')} ({pendingTasks.length})
           </div>
           {sections.pending && (
             <div className="flex flex-col">
-              {MOCK_TASKS.map(task => (
+              {pendingTasks.map(task => (
                 <div 
                   key={task.id} 
                   onClick={() => onSelectTask(task.id)}
@@ -62,11 +71,11 @@ const TaskTree: React.FC<TaskTreeProps> = ({ activeTaskId, onSelectTask, onActio
             onClick={() => toggleSection('watched')}
           >
             {sections.watched ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            {t('tasktree.watching')} ({MOCK_WATCHED.length})
+            {t('tasktree.watching')} ({watchedTasks.length})
           </div>
            {sections.watched && (
              <div className="flex flex-col">
-              {MOCK_WATCHED.map(task => (
+              {watchedTasks.map(task => (
                 <div 
                   key={task.id} 
                   onClick={() => onSelectTask(task.id)}

@@ -1,6 +1,8 @@
-import React from 'react';
-import { FolderOpen, Upload, GitBranch, ChevronDown, AlertTriangle, XCircle, Tag, PanelLeft, PanelRight, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FolderOpen, Upload, GitBranch, ChevronDown, Tag, PanelLeft, PanelRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { getTags } from '../api/client';
+import type { Tag as TagType } from '../api/types';
 
 interface ToolBarProps {
   onAction: (msg: string) => void;
@@ -24,6 +26,24 @@ const ToolBar: React.FC<ToolBarProps> = ({
   diffContext
 }) => {
   const { t } = useTranslation();
+  const [tags, setTags] = useState<TagType[]>([]);
+  const [loadingTags, setLoadingTags] = useState(false);
+
+  useEffect(() => {
+    setLoadingTags(true);
+    getTags().then(setTags).catch(console.error).finally(() => setLoadingTags(false));
+  }, []);
+
+  // Helper to map generic color class to specific toolbar style
+  // Assuming color is like 'bg-editor-error'
+  const getTagStyle = (bgClass: string) => {
+      if (bgClass.includes('error')) return 'bg-editor-error/20 text-editor-error border-editor-error/30 hover:bg-editor-error/30';
+      if (bgClass.includes('warning')) return 'bg-editor-warning/20 text-editor-warning border-editor-warning/30 hover:bg-editor-warning/30';
+      if (bgClass.includes('info')) return 'bg-editor-info/20 text-editor-info border-editor-info/30 hover:bg-editor-info/30';
+      if (bgClass.includes('success')) return 'bg-editor-success/20 text-editor-success border-editor-success/30 hover:bg-editor-success/30';
+      return 'bg-editor-line/50 text-gray-300 border-editor-line hover:bg-editor-line';
+  };
+
   return (
     <div id="tour-toolbar" className="h-[52px] bg-editor-bg border-b border-editor-line flex flex-col shrink-0 z-40">
       {/* Top Action Row */}
@@ -66,26 +86,25 @@ const ToolBar: React.FC<ToolBarProps> = ({
 
         <div className="flex-1"></div>
 
-        <div className="flex items-center gap-2">
-             <span className="text-gray-500 hidden lg:inline">{t('toolbar.quick_tags')}</span>
-             <span 
-                onClick={() => onAction("Filter: Severe N+1")}
-                className="flex items-center gap-1 px-2 py-0.5 bg-editor-error/20 text-editor-error rounded border border-editor-error/30 cursor-pointer text-[11px] hover:bg-editor-error/30 transition-colors">
-                <XCircle size={10} /> <span className="hidden lg:inline">Severe</span> N+1
-             </span>
-             <span 
-                onClick={() => onAction("Filter: No Tx")}
-                className="flex items-center gap-1 px-2 py-0.5 bg-editor-error/20 text-editor-error rounded border border-editor-error/30 cursor-pointer text-[11px] hover:bg-editor-error/30 transition-colors">
-                <XCircle size={10} /> No Tx
-             </span>
-             <span 
-                onClick={() => onAction("Filter: Hardcoded")}
-                className="flex items-center gap-1 px-2 py-0.5 bg-editor-warning/20 text-editor-warning rounded border border-editor-warning/30 cursor-pointer text-[11px] hover:bg-editor-warning/30 transition-colors">
-                <AlertTriangle size={10} /> Hardcoded
-             </span>
+        <div className="flex items-center gap-2 overflow-hidden">
+             <span className="text-gray-500 hidden lg:inline shrink-0">{t('toolbar.quick_tags')}</span>
+             
+             {loadingTags && <Loader2 size={12} className="animate-spin text-gray-500" />}
+
+             <div className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden mask-linear-fade">
+                {tags.slice(0, 3).map(tag => (
+                     <span 
+                        key={tag.id}
+                        onClick={() => onAction(`Filter: ${tag.label}`)}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer text-[11px] transition-colors whitespace-nowrap ${getTagStyle(tag.color)}`}>
+                        <Tag size={10} /> {tag.label}
+                    </span>
+                ))}
+             </div>
+
              <span 
                 onClick={() => onAction("Opening Tag Manager...")}
-                className="flex items-center gap-1 px-2 py-0.5 bg-editor-line text-gray-400 rounded cursor-pointer text-[11px] hover:text-white transition-colors">
+                className="flex items-center gap-1 px-2 py-0.5 bg-editor-line text-gray-400 rounded cursor-pointer text-[11px] hover:text-white transition-colors shrink-0">
                 <Tag size={10} /> {t('toolbar.manage')}
              </span>
         </div>

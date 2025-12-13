@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Layers, History, PieChart, ListChecks, GripVertical, CheckSquare, Square, Trash2, Check, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Layers, History, PieChart, ListChecks, GripVertical, CheckSquare, Square, Trash2, Loader2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { getHeatmap, getBlame, getReviewStats, getChecklist } from '../api/client';
+import type { HeatmapItem, BlameInfo, ReviewStats, ChecklistItem } from '../api/types';
 
 enum Tab {
   HEATMAP = 'heatmap',
@@ -16,14 +18,47 @@ interface RightPanelProps {
 const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>(Tab.HEATMAP);
+  const [loading, setLoading] = useState(false);
 
-  // State for List Tab
-  const [listItems, setListItems] = useState([
-      { id: '1', text: 'src/main/java/com/alipay/**/*.java', checked: false },
-      { id: '2', text: 'src/main/resources/mapper/*Payment*.xml', checked: false },
-      { id: '3', text: 'db/procedure/pkg_payment.pkb L200-500', checked: false },
-  ]);
+  // Data States
+  const [heatmapData, setHeatmapData] = useState<HeatmapItem[]>([]);
+  const [blameData, setBlameData] = useState<BlameInfo | null>(null);
+  const [statsData, setStatsData] = useState<ReviewStats | null>(null);
+  const [listItems, setListItems] = useState<ChecklistItem[]>([]);
+
+  // Drag State
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+
+  // Fetch data on tab change
+  useEffect(() => {
+    setLoading(true);
+    let promise: Promise<any>;
+
+    switch (activeTab) {
+        case Tab.HEATMAP:
+            promise = getHeatmap().then(setHeatmapData);
+            break;
+        case Tab.BLAME:
+            promise = getBlame('current-file').then(setBlameData);
+            break;
+        case Tab.STATS:
+            promise = getReviewStats().then(setStatsData);
+            break;
+        case Tab.LIST:
+            // Only load checklist if empty to preserve local edits
+            if (listItems.length === 0) {
+                promise = getChecklist().then(setListItems);
+            } else {
+                promise = Promise.resolve();
+            }
+            break;
+        default:
+            promise = Promise.resolve();
+    }
+
+    promise.catch(console.error).finally(() => setLoading(false));
+  }, [activeTab]);
+
 
   // List Actions
   const toggleCheck = (id: string) => {
@@ -109,95 +144,96 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
+            {loading && listItems.length === 0 ? (
+                 <div className="flex flex-col items-center justify-center h-full gap-2 text-gray-500">
+                    <Loader2 size={24} className="animate-spin text-editor-accent" />
+                    <span className="text-xs">Loading data...</span>
+                 </div>
+            ) : (
+            <>
             {activeTab === Tab.HEATMAP && (
                 <div className="space-y-4">
                     <h3 className="text-xs font-bold text-gray-400 uppercase">{t('rightpanel.heatmap.title')}</h3>
                     <div className="text-[11px] text-gray-500 mb-2">{t('rightpanel.heatmap.desc')}</div>
                     
                     <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-editor-line p-3 rounded border border-editor-error/40 relative overflow-hidden group cursor-pointer hover:border-white transition-colors"
-                             onClick={() => onAction("Focus: Payment Module")}>
-                            <div className="absolute inset-0 bg-editor-error opacity-20"></div>
-                            <span className="font-bold relative text-white">payment</span>
-                            <div className="mt-2 text-[10px] text-gray-400 relative">{t('rightpanel.heatmap.impact.high')}</div>
-                        </div>
-                        <div className="bg-editor-line p-3 rounded border border-editor-error/40 relative overflow-hidden group cursor-pointer hover:border-white transition-colors"
-                             onClick={() => onAction("Focus: Auth Module")}>
-                             <div className="absolute inset-0 bg-editor-error opacity-20"></div>
-                            <span className="font-bold relative text-white">auth</span>
-                             <div className="mt-2 text-[10px] text-gray-400 relative">{t('rightpanel.heatmap.impact.high')}</div>
-                        </div>
-                         <div className="bg-editor-line p-3 rounded border border-editor-error/20 relative overflow-hidden group cursor-pointer hover:border-white transition-colors"
-                             onClick={() => onAction("Focus: DB Module")}>
-                             <div className="absolute inset-0 bg-editor-error opacity-10"></div>
-                            <span className="font-bold relative text-white">db</span>
-                             <div className="mt-2 text-[10px] text-gray-400 relative">{t('rightpanel.heatmap.impact.medium')}</div>
-                        </div>
-                        <div className="bg-editor-line p-3 rounded border border-gray-600 relative overflow-hidden group cursor-pointer hover:border-white transition-colors"
-                             onClick={() => onAction("Focus: API Module")}>
-                            <span className="font-bold relative text-gray-300">api</span>
-                             <div className="mt-2 text-[10px] text-gray-400 relative">{t('rightpanel.heatmap.impact.low')}</div>
-                        </div>
+                        {heatmapData.map(item => {
+                            const borderColor = item.impact === 'high' ? 'border-editor-error/40' : item.impact === 'medium' ? 'border-editor-error/20' : 'border-gray-600';
+                            const opacity = item.impact === 'high' ? 'opacity-20' : item.impact === 'medium' ? 'opacity-10' : 'opacity-0';
+                            const textColor = item.impact === 'low' ? 'text-gray-300' : 'text-white';
+                            
+                            return (
+                                <div key={item.id} className={`bg-editor-line p-3 rounded border ${borderColor} relative overflow-hidden group cursor-pointer hover:border-white transition-colors`}
+                                     onClick={() => onAction(`Focus: ${item.name} Module`)}>
+                                    {item.impact !== 'low' && <div className={`absolute inset-0 bg-editor-error ${opacity}`}></div>}
+                                    <span className={`font-bold relative ${textColor}`}>{item.name}</span>
+                                    <div className="mt-2 text-[10px] text-gray-400 relative">
+                                        {item.impact === 'high' ? t('rightpanel.heatmap.impact.high') : 
+                                         item.impact === 'medium' ? t('rightpanel.heatmap.impact.medium') : 
+                                         t('rightpanel.heatmap.impact.low')}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
 
-            {activeTab === Tab.BLAME && (
+            {activeTab === Tab.BLAME && blameData && (
                  <div className="space-y-4">
                     <div className="flex items-center gap-2 mb-2 hover:bg-editor-line p-1 rounded cursor-pointer transition-colors" onClick={() => onAction("Show Author Details")}>
-                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">A</div>
+                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">{blameData.avatar}</div>
                         <div className="flex flex-col">
-                            <span className="text-xs font-bold text-white">alice</span>
-                            <span className="text-[10px] text-gray-400">2025-11-20 18:33</span>
+                            <span className="text-xs font-bold text-white">{blameData.author}</span>
+                            <span className="text-[10px] text-gray-400">{blameData.time}</span>
                         </div>
                     </div>
                     <div className="bg-editor-line p-2 rounded text-xs text-gray-300 border-l-2 border-editor-accent cursor-pointer hover:bg-gray-700 transition-colors" onClick={() => onAction("View Linked PR")}>
-                        PR#2711 "Introduce Retry State Machine"
+                        {blameData.prName}
                     </div>
                     <div className="text-[11px] text-gray-500">
-                        {t('rightpanel.blame.reviewer')}: <span className="text-editor-accent cursor-pointer hover:underline">ferris</span> (LGTM with nit)
+                        {t('rightpanel.blame.reviewer')}: <span className="text-editor-accent cursor-pointer hover:underline">{blameData.reviewer}</span> ({blameData.reviewerStatus})
                     </div>
                     <div className="bg-gray-800 p-2 rounded text-[11px] text-gray-400 italic">
-                        "This part might cause a deadlock, added lock optimization."
+                        {blameData.comment}
                     </div>
                  </div>
             )}
 
-            {activeTab === Tab.STATS && (
+            {activeTab === Tab.STATS && statsData && (
                  <div className="space-y-4">
                     <h3 className="text-xs font-bold text-gray-400 uppercase">{t('rightpanel.stats.title')}</h3>
                     <div className="flex flex-col gap-2">
                          <div className="flex justify-between text-xs">
                              <span className="text-gray-400">{t('rightpanel.stats.reviewed')}</span>
-                             <span className="text-white">73 / 127</span>
+                             <span className="text-white">{statsData.reviewedCount} / {statsData.totalCount}</span>
                          </div>
                          <div className="w-full bg-editor-line h-1.5 rounded-full overflow-hidden">
-                             <div className="bg-editor-success h-full" style={{width: '57%'}}></div>
+                             <div className="bg-editor-success h-full" style={{width: `${(statsData.reviewedCount / statsData.totalCount) * 100}%`}}></div>
                          </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 mt-4">
                         <div className="bg-editor-line p-2 rounded text-center cursor-pointer hover:bg-editor-line/80 transition-colors" onClick={() => onAction("Filter Severe Issues")}>
-                            <div className="text-xl font-bold text-editor-error">12</div>
+                            <div className="text-xl font-bold text-editor-error">{statsData.severeCount}</div>
                             <div className="text-[10px] text-gray-400 uppercase">{t('rightpanel.stats.severe')}</div>
                         </div>
                         <div className="bg-editor-line p-2 rounded text-center cursor-pointer hover:bg-editor-line/80 transition-colors" onClick={() => onAction("Filter Warnings")}>
-                            <div className="text-xl font-bold text-editor-warning">28</div>
+                            <div className="text-xl font-bold text-editor-warning">{statsData.warningCount}</div>
                             <div className="text-[10px] text-gray-400 uppercase">{t('rightpanel.stats.warning')}</div>
                         </div>
                         <div className="bg-editor-line p-2 rounded text-center cursor-pointer hover:bg-editor-line/80 transition-colors" onClick={() => onAction("Filter Pending Replies")}>
-                            <div className="text-xl font-bold text-editor-info">7</div>
+                            <div className="text-xl font-bold text-editor-info">{statsData.pendingCount}</div>
                             <div className="text-[10px] text-gray-400 uppercase">{t('rightpanel.stats.pending')}</div>
                         </div>
                         <div className="bg-editor-line p-2 rounded text-center">
-                            <div className="text-xl font-bold text-white">11m</div>
+                            <div className="text-xl font-bold text-white">{statsData.estimatedTime}</div>
                             <div className="text-[10px] text-gray-400 uppercase">{t('rightpanel.stats.time')}</div>
                         </div>
                     </div>
                  </div>
             )}
              
-            {/* UPDATED LIST TAB */}
             {activeTab === Tab.LIST && (
                  <div className="flex flex-col h-full">
                      <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 shrink-0">{t('rightpanel.list.title')}</h3>
@@ -246,6 +282,8 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
                          </button>
                      </div>
                  </div>
+            )}
+            </>
             )}
         </div>
     </div>

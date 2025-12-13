@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { MOCK_DIFF_LINES } from '../constants';
-import { ReviewSeverity } from '../types';
-import { AlertTriangle, XCircle, ChevronDown, Maximize2, Minimize2, Search, X, ArrowUp, ArrowDown, HelpCircle, Check, Wand, ChevronRight, Eye, Package, Box, MoreHorizontal, WrapText } from 'lucide-react';
+import { ReviewSeverity } from '../api/types';
+import type { DiffLine, ReviewTemplate } from '../api/types';
+import { getFileDiff, getReviewTemplates } from '../api/client';
+import { AlertTriangle, XCircle, ChevronDown, Maximize2, Minimize2, Search, X, ArrowUp, ArrowDown, HelpCircle, Check, Wand, ChevronRight, Eye, Package, Box, MoreHorizontal, WrapText, Loader2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
 interface DiffViewProps {
@@ -16,6 +17,11 @@ type ViewMode = 'diff' | 'old' | 'new';
 const DiffView: React.FC<DiffViewProps> = ({ isMaximized, toggleMaximize, onAction, diffContext }) => {
   const { t } = useTranslation();
   
+  // Data State
+  const [diffLines, setDiffLines] = useState<DiffLine[]>([]);
+  const [templates, setTemplates] = useState<ReviewTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+
   // View State
   const [viewMode, setViewMode] = useState<ViewMode>('diff');
   const [isLineWrap, setIsLineWrap] = useState(false);
@@ -39,14 +45,29 @@ const DiffView: React.FC<DiffViewProps> = ({ isMaximized, toggleMaximize, onActi
     lineIndex: null,
   });
 
+  // Load Diff Data & Templates
+  useEffect(() => {
+    setLoading(true);
+    // Fetch diff and templates in parallel
+    Promise.all([
+        getFileDiff('current-file'),
+        getReviewTemplates()
+    ]).then(([diffData, templateData]) => {
+        setDiffLines(diffData);
+        setTemplates(templateData);
+    })
+    .catch(console.error)
+    .finally(() => setLoading(false));
+  }, []);
+
   // --- Logic for Folding Lines ---
   const displayLines = useMemo(() => {
-    const lines = [];
+    const lines: DiffLine[] = [];
     let skippingImports = false;
     let skippingLombok = false;
 
-    for (let i = 0; i < MOCK_DIFF_LINES.length; i++) {
-        const line = MOCK_DIFF_LINES[i];
+    for (let i = 0; i < diffLines.length; i++) {
+        const line = diffLines[i];
         const content = line.content.trim();
         
         const isImport = content.startsWith('import ') || (skippingImports && content === '');
@@ -60,7 +81,7 @@ const DiffView: React.FC<DiffViewProps> = ({ isMaximized, toggleMaximize, onActi
                 lines.push({ 
                     ...line, 
                     type: 'header', 
-                    content: `import ... (${MOCK_DIFF_LINES.filter(l => l.content.trim().startsWith('import ')).length} lines hidden)`,
+                    content: `import ... (${diffLines.filter(l => l.content.trim().startsWith('import ')).length} lines hidden)`,
                     isFoldPlaceholder: true,
                     onClick: () => setFoldImports(false)
                 });
@@ -91,7 +112,7 @@ const DiffView: React.FC<DiffViewProps> = ({ isMaximized, toggleMaximize, onActi
         lines.push(line);
     }
     return lines;
-  }, [foldImports, foldLombok, viewMode]);
+  }, [foldImports, foldLombok, viewMode, diffLines]);
 
   const toggleSearch = () => {
     setSearchOpen(prev => !prev);
@@ -120,7 +141,7 @@ const DiffView: React.FC<DiffViewProps> = ({ isMaximized, toggleMaximize, onActi
 
   const handleMenuAction = (action: string) => {
     if (onAction) {
-        onAction(`Context Action: ${action} on line ${contextMenu.lineIndex !== null ? MOCK_DIFF_LINES[contextMenu.lineIndex]?.newLineNumber || 'context' : 'unknown'}`);
+        onAction(`Context Action: ${action} on line ${contextMenu.lineIndex !== null ? diffLines[contextMenu.lineIndex]?.newLineNumber || 'context' : 'unknown'}`);
     }
     closeContextMenu();
   };
@@ -140,9 +161,6 @@ const DiffView: React.FC<DiffViewProps> = ({ isMaximized, toggleMaximize, onActi
     displayLines.forEach((line: any, displayIndex) => {
         // Skip placeholders
         if (line.isFoldPlaceholder) return;
-        
-        // Find original index for linking if needed, but for now we scroll to ID
-        // Note: Logic simplification, mapping display index to original index would be more robust
         
         // Filter lines based on view mode before searching
         if (viewMode === 'old' && line.type === 'added') return;
@@ -372,11 +390,22 @@ const DiffView: React.FC<DiffViewProps> = ({ isMaximized, toggleMaximize, onActi
                  <span>{t('contextmenu.insert_template')}</span>
                  <ChevronRight size={12} />
                  
-                 {/* Submenu Content */}
-                 <div className="absolute left-full top-0 ml-[-2px] bg-editor-sidebar border border-editor-line shadow-[0_4px_12px_rgba(0,0,0,0.5)] rounded py-1 w-[180px] hidden group-hover:block">
-                    <div onClick={() => handleMenuAction('Template: Missing Transaction')} className="px-3 py-1.5 text-xs text-editor-fg hover:bg-editor-line hover:text-white cursor-pointer whitespace-nowrap">{t('contextmenu.template.transaction')}</div>
-                    <div onClick={() => handleMenuAction('Template: Potential N+1')} className="px-3 py-1.5 text-xs text-editor-fg hover:bg-editor-line hover:text-white cursor-pointer whitespace-nowrap">{t('contextmenu.template.nplus1')}</div>
-                    <div onClick={() => handleMenuAction('Template: Hardcoded SQL')} className="px-3 py-1.5 text-xs text-editor-fg hover:bg-editor-line hover:text-white cursor-pointer whitespace-nowrap">{t('contextmenu.template.hardcoded')}</div>
+                 {/* Submenu Content - Dynamic from API */}
+                 <div className="absolute left-full top-0 ml-[-2px] bg-editor-sidebar border border-editor-line shadow-[0_4px_12px_rgba(0,0,0,0.5)] rounded py-1 w-[200px] hidden group-hover:block max-h-[200px] overflow-y-auto">
+                    {templates.length > 0 ? (
+                        templates.map(tpl => (
+                            <div 
+                                key={tpl.id} 
+                                onClick={() => handleMenuAction(`Template: ${tpl.label}`)} 
+                                className="px-3 py-1.5 text-xs text-editor-fg hover:bg-editor-line hover:text-white cursor-pointer whitespace-nowrap"
+                                title={tpl.content}
+                            >
+                                {tpl.label}
+                            </div>
+                        ))
+                    ) : (
+                         <div className="px-3 py-1.5 text-xs text-gray-500 italic">No templates</div>
+                    )}
                  </div>
             </div>
 
@@ -418,6 +447,16 @@ const DiffView: React.FC<DiffViewProps> = ({ isMaximized, toggleMaximize, onActi
 
       {/* Diff Content - Update overflow to auto for horizontal scroll support */}
       <div className="flex-1 overflow-y-auto overflow-x-auto font-mono text-[14px] leading-[22px] relative">
+        
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-editor-bg/80 z-30">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 size={32} className="animate-spin text-editor-accent" />
+              <span className="text-xs text-gray-400">Loading diff...</span>
+            </div>
+          </div>
+        )}
+
         {displayLines.map((line: any, displayIndex: number) => {
              // Logic for View Modes
              if (viewMode === 'old' && line.type === 'added' && !line.isFoldPlaceholder) return null;

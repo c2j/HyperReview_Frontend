@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { GitBranch, ArrowRight, ArrowLeftRight, Check, Play } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { GitBranch, ArrowRight, ArrowLeftRight, Check, Play, Loader2, ArrowLeft } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { getBranches } from '../api/client';
+import type { Branch } from '../api/types';
 
 interface BranchCompareModalProps {
   currentBase: string;
@@ -8,22 +10,23 @@ interface BranchCompareModalProps {
   onClose: () => void;
   onApply: (base: string, head: string) => void;
   isInitialSetup?: boolean;
+  onBack?: () => void;
 }
 
-const BRANCHES = [
-  'master',
-  'main',
-  'develop',
-  'feature/payment-retry',
-  'feature/auth-refactor',
-  'hotfix/login-issue',
-  'release/v3.1.0'
-];
-
-const BranchCompareModal: React.FC<BranchCompareModalProps> = ({ currentBase, currentHead, onClose, onApply, isInitialSetup = false }) => {
+const BranchCompareModal: React.FC<BranchCompareModalProps> = ({ currentBase, currentHead, onClose, onApply, isInitialSetup = false, onBack }) => {
   const { t } = useTranslation();
   const [base, setBase] = useState(currentBase);
   const [head, setHead] = useState(currentHead);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    getBranches()
+      .then(setBranches)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleSwap = () => {
     const temp = base;
@@ -39,6 +42,12 @@ const BranchCompareModal: React.FC<BranchCompareModalProps> = ({ currentBase, cu
         </div>
       )}
 
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-8 text-gray-500 gap-2">
+           <Loader2 size={24} className="animate-spin text-editor-accent" />
+           <span className="text-xs">Loading branches...</span>
+        </div>
+      ) : (
       <div className="flex items-center justify-between gap-4">
         
         {/* Base Branch Selection */}
@@ -47,15 +56,15 @@ const BranchCompareModal: React.FC<BranchCompareModalProps> = ({ currentBase, cu
              <GitBranch size={12} /> {t('modal.branch_compare.base')}
           </label>
           <div className="space-y-1 max-h-[200px] overflow-y-auto border border-editor-line rounded p-1 bg-editor-sidebar">
-             {BRANCHES.map(b => (
+             {branches.map(b => (
                 <div 
-                    key={`base-${b}`}
-                    onClick={() => setBase(b)}
+                    key={`base-${b.name}`}
+                    onClick={() => setBase(b.name)}
                     className={`px-3 py-2 rounded cursor-pointer text-xs font-mono flex items-center justify-between transition-colors
-                        ${base === b ? 'bg-editor-error/20 text-white' : 'text-gray-400 hover:bg-editor-line hover:text-gray-300'}`}
+                        ${base === b.name ? 'bg-editor-error/20 text-white' : 'text-gray-400 hover:bg-editor-line hover:text-gray-300'}`}
                 >
-                    {b}
-                    {base === b && <Check size={12} className="text-editor-error" />}
+                    {b.name}
+                    {base === b.name && <Check size={12} className="text-editor-error" />}
                 </div>
              ))}
           </div>
@@ -79,39 +88,50 @@ const BranchCompareModal: React.FC<BranchCompareModalProps> = ({ currentBase, cu
              <GitBranch size={12} /> {t('modal.branch_compare.compare')}
           </label>
            <div className="space-y-1 max-h-[200px] overflow-y-auto border border-editor-line rounded p-1 bg-editor-sidebar">
-             {BRANCHES.map(b => (
+             {branches.map(b => (
                 <div 
-                    key={`head-${b}`}
-                    onClick={() => setHead(b)}
+                    key={`head-${b.name}`}
+                    onClick={() => setHead(b.name)}
                     className={`px-3 py-2 rounded cursor-pointer text-xs font-mono flex items-center justify-between transition-colors
-                        ${head === b ? 'bg-editor-success/20 text-white' : 'text-gray-400 hover:bg-editor-line hover:text-gray-300'}`}
+                        ${head === b.name ? 'bg-editor-success/20 text-white' : 'text-gray-400 hover:bg-editor-line hover:text-gray-300'}`}
                 >
-                    {b}
-                    {head === b && <Check size={12} className="text-editor-success" />}
+                    {b.name}
+                    {head === b.name && <Check size={12} className="text-editor-success" />}
                 </div>
              ))}
           </div>
         </div>
 
       </div>
+      )}
 
-      <div className="flex justify-end gap-2 pt-4 border-t border-editor-line">
-        <button onClick={onClose} className="px-4 py-1.5 rounded text-xs hover:bg-editor-line text-gray-300 transition-colors">
-            {t('modal.open_repo.cancel')}
-        </button>
-        <button 
-          onClick={() => onApply(base, head)}
-          className={`px-4 py-1.5 rounded text-xs text-white hover:bg-blue-600 transition-colors font-medium shadow-sm flex items-center gap-2
-            ${isInitialSetup ? 'bg-editor-success hover:bg-green-600' : 'bg-editor-accent'}`}
-        >
-          {isInitialSetup ? (
-              <>
-                <Play size={12} /> {t('modal.branch_compare.start')}
-              </>
-          ) : (
-              t('modal.branch_compare.apply')
-          )}
-        </button>
+      <div className="flex justify-between items-center pt-4 border-t border-editor-line">
+        <div>
+            {isInitialSetup && onBack && (
+                <button onClick={onBack} className="flex items-center gap-1 px-3 py-1.5 rounded text-xs hover:bg-editor-line text-gray-300 transition-colors">
+                    <ArrowLeft size={12} /> {t('modal.branch_compare.back')}
+                </button>
+            )}
+        </div>
+        <div className="flex gap-2">
+            <button onClick={onClose} className="px-4 py-1.5 rounded text-xs hover:bg-editor-line text-gray-300 transition-colors">
+                {t('modal.open_repo.cancel')}
+            </button>
+            <button 
+            onClick={() => onApply(base, head)}
+            disabled={loading}
+            className={`px-4 py-1.5 rounded text-xs text-white hover:bg-blue-600 transition-colors font-medium shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed
+                ${isInitialSetup ? 'bg-editor-success hover:bg-green-600' : 'bg-editor-accent'}`}
+            >
+            {isInitialSetup ? (
+                <>
+                    <Play size={12} /> {t('modal.branch_compare.start')}
+                </>
+            ) : (
+                t('modal.branch_compare.apply')
+            )}
+            </button>
+        </div>
       </div>
     </div>
   );

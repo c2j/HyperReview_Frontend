@@ -1,17 +1,12 @@
-import React, { useState } from 'react';
-import { Tag, X, Plus, Circle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Tag, X, Plus, Circle, Loader2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { getTags } from '../api/client';
+import type { Tag as TagType } from '../api/types';
 
 interface TagManagerModalProps {
   onClose: () => void;
 }
-
-const INITIAL_TAGS = [
-    { id: 1, label: 'Severe N+1', color: 'bg-editor-error' },
-    { id: 2, label: 'No Tx', color: 'bg-editor-error' },
-    { id: 3, label: 'Hardcoded', color: 'bg-editor-warning' },
-    { id: 4, label: 'Typo', color: 'bg-editor-info' },
-];
 
 const COLORS = [
     { name: 'red', class: 'bg-editor-error' },
@@ -23,9 +18,18 @@ const COLORS = [
 
 const TagManagerModal: React.FC<TagManagerModalProps> = ({ onClose }) => {
   const { t } = useTranslation();
-  const [tags, setTags] = useState(INITIAL_TAGS);
+  const [tags, setTags] = useState<TagType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [newTag, setNewTag] = useState('');
   const [selectedColor, setSelectedColor] = useState(COLORS[0].class);
+
+  useEffect(() => {
+    setLoading(true);
+    getTags()
+        .then(setTags)
+        .catch(console.error)
+        .finally(() => setLoading(false));
+  }, []);
 
   const removeTag = (id: number) => {
     setTags(tags.filter(t => t.id !== id));
@@ -39,19 +43,28 @@ const TagManagerModal: React.FC<TagManagerModalProps> = ({ onClose }) => {
 
   return (
     <div className="flex flex-col gap-4">
-        <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
-            {tags.map(tag => (
-                <div key={tag.id} className="flex items-center justify-between bg-editor-line/30 p-2 rounded border border-editor-line/50 group hover:border-editor-line transition-colors">
-                    <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${tag.color} shadow-sm`}></div>
-                        <span className="text-sm text-editor-fg font-medium">{tag.label}</span>
-                    </div>
-                    <button onClick={() => removeTag(tag.id)} className="text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-editor-line rounded">
-                        <X size={14} />
-                    </button>
+        <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1 min-h-[100px]">
+            {loading ? (
+                <div className="flex flex-col items-center justify-center h-[100px] gap-2 text-gray-500">
+                    <Loader2 size={24} className="animate-spin text-editor-accent" />
+                    <span className="text-xs">Loading tags...</span>
                 </div>
-            ))}
-            {tags.length === 0 && <div className="text-center text-xs text-gray-500 py-4 italic">{t('modal.tag_manager.no_tags')}</div>}
+            ) : (
+                <>
+                {tags.map(tag => (
+                    <div key={tag.id} className="flex items-center justify-between bg-editor-line/30 p-2 rounded border border-editor-line/50 group hover:border-editor-line transition-colors">
+                        <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full ${tag.color} shadow-sm`}></div>
+                            <span className="text-sm text-editor-fg font-medium">{tag.label}</span>
+                        </div>
+                        <button onClick={() => removeTag(tag.id)} className="text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-editor-line rounded">
+                            <X size={14} />
+                        </button>
+                    </div>
+                ))}
+                {tags.length === 0 && <div className="text-center text-xs text-gray-500 py-4 italic">{t('modal.tag_manager.no_tags')}</div>}
+                </>
+            )}
         </div>
 
         <div className="border-t border-editor-line pt-4">

@@ -1,32 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, FileCode, Hash, Command, ArrowRight } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { getCommands } from '../api/client';
+import type { SearchResult } from '../api/types';
 
 interface CommandPaletteProps {
   onClose: () => void;
   onNavigate: (target: string) => void;
 }
 
-const COMMANDS = [
-  { type: 'file', icon: FileCode, label: 'RetryServiceImpl.java', desc: 'src/main/java/.../impl' },
-  { type: 'file', icon: FileCode, label: 'PaymentController.java', desc: 'src/main/java/.../web' },
-  { type: 'symbol', icon: Hash, label: 'method: updateStatus', desc: 'RetryServiceImpl.java' },
-  { type: 'symbol', icon: Hash, label: 'const: MAX_RETRY_COUNT', desc: 'RetryConfig.java' },
-  { type: 'cmd', icon: Command, label: 'Toggle Vim Mode', desc: 'Settings' },
-  { type: 'cmd', icon: Command, label: 'Fold All Regions', desc: 'View' },
-];
-
 const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose, onNavigate }) => {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [commands, setCommands] = useState<SearchResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const filtered = COMMANDS.filter(c => c.label.toLowerCase().includes(query.toLowerCase()));
 
   useEffect(() => {
     inputRef.current?.focus();
+    getCommands().then(setCommands).catch(console.error);
   }, []);
+
+  const filtered = commands.filter(c => c.label.toLowerCase().includes(query.toLowerCase()));
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
@@ -38,6 +33,15 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose, onNavigate }) 
         onNavigate(filtered[selectedIndex].label);
       }
     }
+  };
+
+  const getIcon = (type: string) => {
+      switch(type) {
+          case 'file': return FileCode;
+          case 'symbol': return Hash;
+          case 'cmd': return Command;
+          default: return FileCode;
+      }
   };
 
   return (
@@ -55,14 +59,16 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose, onNavigate }) 
         <span className="text-[10px] text-gray-500 border border-editor-line px-1.5 rounded">{t('command.esc')}</span>
       </div>
       <div className="flex-1 overflow-y-auto py-2">
-        {filtered.map((item, idx) => (
+        {filtered.map((item, idx) => {
+          const Icon = getIcon(item.type);
+          return (
           <div 
             key={idx}
             className={`px-4 py-2 flex items-center gap-3 cursor-pointer ${idx === selectedIndex ? 'bg-editor-selection' : 'hover:bg-editor-line'}`}
             onClick={() => onNavigate(item.label)}
             onMouseEnter={() => setSelectedIndex(idx)}
           >
-            <item.icon size={14} className={idx === selectedIndex ? 'text-white' : 'text-gray-500'} />
+            <Icon size={14} className={idx === selectedIndex ? 'text-white' : 'text-gray-500'} />
             <div className="flex-1 min-w-0">
               <div className={`text-sm font-mono truncate ${idx === selectedIndex ? 'text-white' : 'text-editor-fg'}`}>
                 {item.label}
@@ -73,7 +79,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ onClose, onNavigate }) 
             </div>
             {idx === selectedIndex && <ArrowRight size={12} className="text-white" />}
           </div>
-        ))}
+          );
+        })}
         {filtered.length === 0 && (
           <div className="text-center py-8 text-gray-500 text-xs">No results found</div>
         )}

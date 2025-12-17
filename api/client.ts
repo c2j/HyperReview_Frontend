@@ -1,7 +1,8 @@
 
 import type { 
   Repo, Branch, Task, DiffLine, HeatmapItem, BlameInfo, ReviewStats, 
-  ChecklistItem, Tag, SearchResult, ReviewTemplate, QualityGate, FileNode
+  ChecklistItem, Tag, SearchResult, ReviewTemplate, QualityGate, FileNode,
+  ReviewGuideItem
 } from './types';
 import { ReviewSeverity } from './types';
 
@@ -50,6 +51,9 @@ export const getReviewStats = (): Promise<ReviewStats> =>
 
 export const getChecklist = (): Promise<ChecklistItem[]> =>
   MOCK ? mockGetChecklist() : isTauri() ? invoke('get_checklist') : httpGetChecklist();
+
+export const getReviewGuide = (): Promise<ReviewGuideItem[]> =>
+  MOCK ? mockGetReviewGuide() : isTauri() ? invoke('get_review_guide') : Promise.resolve([]);
 
 export const getTags = (): Promise<Tag[]> =>
   MOCK ? mockGetTags() : isTauri() ? invoke('get_tags') : httpGetTags();
@@ -291,6 +295,17 @@ async function mockGetChecklist(): Promise<ChecklistItem[]> {
     { id: '1', text: 'src/main/java/com/alipay/**/*.java', checked: false },
     { id: '2', text: 'src/main/resources/mapper/*Payment*.xml', checked: false },
     { id: '3', text: 'db/procedure/pkg_payment.pkb L200-500', checked: false },
+  ];
+}
+
+async function mockGetReviewGuide(): Promise<ReviewGuideItem[]> {
+  await new Promise(r => setTimeout(r, 200));
+  return [
+    { id: 'g1', category: 'security', severity: 'high', title: 'SQL 注入风险 (SQLi)', description: '检查 XML Mapper 中是否使用了 ${} 而非 #{} 进行参数绑定。' },
+    { id: 'g2', category: 'performance', severity: 'medium', title: '潜在 N+1 查询', description: '循环体内部调用了数据库查询或 RPC 接口，建议使用 Batch 模式。' },
+    { id: 'g3', category: 'logic', severity: 'high', title: '事务边界缺失', description: '涉及多表更新的服务方法必须标注 @Transactional。' },
+    { id: 'g4', category: 'style', severity: 'low', title: '魔法数字', description: '硬编码的超时时间或状态码建议提取为常量。' },
+    { id: 'g5', category: 'performance', severity: 'high', title: '连接未关闭', description: '检查 Stream 或 HttpClient 是否在 finally 块中关闭。' },
   ];
 }
 

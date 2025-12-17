@@ -31,3 +31,12 @@ export interface ChecklistItem {
   text: string;
   checked: boolean;
 }
+
+export interface ReviewGuideItem {
+  id: string;
+  category: 'security' | 'performance' | 'style' | 'logic';
+  title: string;
+  description: string;
+  severity: 'high' | 'medium' | 'low';
+  referenceUrl?: string;
+}

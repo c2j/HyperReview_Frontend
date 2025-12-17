@@ -1,15 +1,16 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layers, History, PieChart, ListChecks, GripVertical, CheckSquare, Square, Trash2, Loader2 } from 'lucide-react';
+import { Layers, History, PieChart, ListChecks, GripVertical, CheckSquare, Square, Trash2, Loader2, BookOpen, ExternalLink, Shield, Zap, Palette, Code } from 'lucide-react';
 import { useTranslation } from '../i18n';
-import { getHeatmap, getBlame, getReviewStats, getChecklist } from '../api/client';
-import type { HeatmapItem, BlameInfo, ReviewStats, ChecklistItem } from '../api/types';
+import { getHeatmap, getBlame, getReviewStats, getChecklist, getReviewGuide } from '../api/client';
+import type { HeatmapItem, BlameInfo, ReviewStats, ChecklistItem, ReviewGuideItem } from '../api/types';
 
 enum Tab {
   HEATMAP = 'heatmap',
   BLAME = 'blame',
   STATS = 'stats',
-  LIST = 'list'
+  LIST = 'list',
+  GUIDE = 'guide'
 }
 
 interface RightPanelProps {
@@ -26,6 +27,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
   const [blameData, setBlameData] = useState<BlameInfo | null>(null);
   const [statsData, setStatsData] = useState<ReviewStats | null>(null);
   const [listItems, setListItems] = useState<ChecklistItem[]>([]);
+  const [guideItems, setGuideItems] = useState<ReviewGuideItem[]>([]);
 
   // Drag State
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
@@ -46,12 +48,14 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
             promise = getReviewStats().then(setStatsData);
             break;
         case Tab.LIST:
-            // Only load checklist if empty to preserve local edits
             if (listItems.length === 0) {
                 promise = getChecklist().then(setListItems);
             } else {
                 promise = Promise.resolve();
             }
+            break;
+        case Tab.GUIDE:
+            promise = getReviewGuide().then(setGuideItems);
             break;
         default:
             promise = Promise.resolve();
@@ -126,9 +130,20 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
       return stats;
   }, [heatmapData]);
 
+  // Guide Helper
+  const getCategoryIcon = (cat: string) => {
+      switch(cat) {
+          case 'security': return <Shield size={14} className="text-editor-error" />;
+          case 'performance': return <Zap size={14} className="text-editor-warning" />;
+          case 'style': return <Palette size={14} className="text-editor-info" />;
+          case 'logic': return <Code size={14} className="text-editor-accent" />;
+          default: return <BookOpen size={14} />;
+      }
+  };
+
   return (
     <div id="tour-right-panel" className="h-full bg-editor-sidebar border-l border-editor-line flex flex-col">
-        {/* Tabs */}
+        {/* Tabs - 5 Slots */}
         <div className="flex border-b border-editor-line bg-editor-bg shrink-0">
             <button 
                 onClick={() => setActiveTab(Tab.HEATMAP)}
@@ -158,11 +173,18 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
             >
                 <ListChecks size={16} />
             </button>
+            <button 
+                onClick={() => setActiveTab(Tab.GUIDE)}
+                className={`flex-1 py-2 flex justify-center items-center border-b-2 transition-colors ${activeTab === Tab.GUIDE ? 'border-editor-accent text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                title={t('rightpanel.tab.guide')}
+            >
+                <BookOpen size={16} />
+            </button>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
-            {loading && listItems.length === 0 ? (
+            {loading && (activeTab !== Tab.LIST || listItems.length === 0) ? (
                  <div className="flex flex-col items-center justify-center h-full gap-2 text-gray-500">
                     <Loader2 size={24} className="animate-spin text-editor-accent" />
                     <span className="text-xs">Loading data...</span>
@@ -173,7 +195,6 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
                  <div className="flex flex-col h-full">
                     <h3 className="text-xs font-bold text-gray-400 uppercase mb-2 shrink-0">{t('rightpanel.heatmap.title')}</h3>
                     
-                    {/* Stats Header */}
                     <div className="bg-editor-line/30 p-3 rounded mb-4 shrink-0 border border-editor-line">
                         <div className="text-xs text-gray-400 mb-2 font-medium">Global Impact Score</div>
                         <div className="flex items-end gap-2 mb-3">
@@ -195,7 +216,6 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
                         </div>
                     </div>
 
-                    {/* File List */}
                     <div className="flex-1 overflow-y-auto space-y-1 pr-1">
                         {heatmapData.map(item => (
                             <div 
@@ -203,7 +223,6 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
                                 onClick={() => onAction(`Opening Diff: ${item.path}`)}
                                 className="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-editor-line/50 group border border-transparent hover:border-editor-line/50 transition-colors"
                             >
-                                {/* Impact Indicator */}
                                 <div className={`w-1 h-8 rounded-full shrink-0 ${
                                     item.impact === 'high' ? 'bg-editor-error shadow-[0_0_8px_rgba(241,76,76,0.5)]' : 
                                     item.impact === 'medium' ? 'bg-editor-warning' : 'bg-editor-info'
@@ -284,7 +303,6 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
                  <div className="flex flex-col h-full">
                      <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 shrink-0">{t('rightpanel.list.title')}</h3>
                      
-                     {/* Draggable List */}
                      <div className="flex-1 overflow-y-auto space-y-1 mb-4 pr-1">
                          {listItems.length === 0 ? (
                              <div className="text-xs text-gray-500 italic text-center py-4">{t('rightpanel.list.no_items')}</div>
@@ -313,7 +331,6 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
                          )}
                      </div>
 
-                     {/* Action Buttons */}
                      <div className="shrink-0 border-t border-editor-line pt-3 flex items-center justify-between gap-2">
                          <div className="flex gap-2">
                              <button onClick={handleSelectAll} className="px-2 py-1 bg-editor-line hover:bg-gray-600 rounded text-[10px] text-gray-300 transition-colors border border-gray-600">
@@ -328,6 +345,57 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
                          </button>
                      </div>
                  </div>
+            )}
+
+            {activeTab === Tab.GUIDE && (
+                <div className="flex flex-col h-full">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 shrink-0">{t('rightpanel.guide.title')}</h3>
+                    
+                    <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                        {guideItems.length === 0 ? (
+                            <div className="text-xs text-gray-500 italic text-center py-4">{t('rightpanel.guide.no_items')}</div>
+                        ) : (
+                            guideItems.map(guide => (
+                                <div 
+                                    key={guide.id}
+                                    onClick={() => onAction(`Guide Point: ${guide.title}`)}
+                                    className={`p-3 rounded border bg-editor-line/10 hover:bg-editor-line/20 cursor-pointer transition-all group relative
+                                        ${guide.severity === 'high' ? 'border-editor-error/30 hover:border-editor-error/50' : 
+                                          guide.severity === 'medium' ? 'border-editor-warning/30 hover:border-editor-warning/50' : 
+                                          'border-editor-line hover:border-editor-info/50'}`}
+                                >
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <div className="flex items-center gap-2">
+                                            {getCategoryIcon(guide.category)}
+                                            <span className={`text-[10px] uppercase font-bold px-1.5 rounded-sm ${
+                                                guide.severity === 'high' ? 'bg-editor-error text-white' : 
+                                                guide.severity === 'medium' ? 'bg-editor-warning text-black' : 
+                                                'bg-editor-info text-white'
+                                            }`}>
+                                                {guide.category}
+                                            </span>
+                                        </div>
+                                        <ExternalLink size={10} className="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                    <h4 className="text-xs font-bold text-white mb-1">{guide.title}</h4>
+                                    <p className="text-[11px] text-gray-400 leading-normal">{guide.description}</p>
+                                    
+                                    {/* Action Dot */}
+                                    <div className="absolute top-2 right-2 flex gap-1">
+                                        {guide.severity === 'high' && <div className="w-1.5 h-1.5 rounded-full bg-editor-error animate-pulse"></div>}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                        
+                        {/* Knowledge Base Teaser */}
+                        <div className="mt-4 p-4 border border-dashed border-editor-line rounded text-center">
+                            <BookOpen size={24} className="mx-auto text-gray-600 mb-2" />
+                            <h5 className="text-xs font-medium text-gray-400 mb-1">More in Knowledge Base</h5>
+                            <button className="text-[10px] text-editor-accent hover:underline">View Team Standards →</button>
+                        </div>
+                    </div>
+                </div>
             )}
             </>
             )}

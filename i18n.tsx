@@ -60,7 +60,8 @@ const translations = {
     'rightpanel.tab.heatmap': '热力图',
     'rightpanel.tab.blame': '追溯',
     'rightpanel.tab.stats': '统计',
-    'rightpanel.tab.list': '列表',
+    'rightpanel.tab.list': '待审',
+    'rightpanel.tab.guide': '规范',
     'rightpanel.heatmap.title': '架构影响热力图',
     'rightpanel.heatmap.desc': '当前PR影响的模块',
     'rightpanel.heatmap.impact.high': '高影响',
@@ -78,6 +79,8 @@ const translations = {
     'rightpanel.list.select_all': '[全选]',
     'rightpanel.list.invert': '[反选]',
     'rightpanel.list.remove': '[移除]',
+    'rightpanel.guide.title': '审计清单与知识库',
+    'rightpanel.guide.no_items': '暂无适配的审核建议',
     'actionbar.approve': '文件通过审核',
     'actionbar.concern': '标记关注',
     'actionbar.reject': '必须改',
@@ -187,7 +190,7 @@ const translations = {
     'tour.toolbar.title': '全局工具栏',
     'tour.toolbar.content': '打开仓库、导入 Patch、切换分支，或使用快捷标签过滤严重问题。',
     'tour.finish.title': '准备就绪',
-    'tour.finish.content': '您已了解基本操作。按 Esc 随时退出引导，祝您评审愉快！',
+    'tour.finish.content': '您已了解基本操作。按 Esc随时退出引导，祝您评审愉快！',
     'tour.next': '下一步',
     'tour.prev': '上一步',
     'tour.finish': '开始使用',
@@ -249,7 +252,8 @@ const translations = {
     'rightpanel.tab.heatmap': 'Heatmap',
     'rightpanel.tab.blame': 'Blame',
     'rightpanel.tab.stats': 'Stats',
-    'rightpanel.tab.list': 'List',
+    'rightpanel.tab.list': 'Pending',
+    'rightpanel.tab.guide': 'Checklist',
     'rightpanel.heatmap.title': 'Architecture Impact Heatmap',
     'rightpanel.heatmap.desc': 'Modules affected by current PR',
     'rightpanel.heatmap.impact.high': 'High Impact',
@@ -267,6 +271,8 @@ const translations = {
     'rightpanel.list.select_all': '[Select All]',
     'rightpanel.list.invert': '[Invert]',
     'rightpanel.list.remove': '[Remove]',
+    'rightpanel.guide.title': 'Review Checklist & KB',
+    'rightpanel.guide.no_items': 'No review suggestions found.',
     'actionbar.approve': 'File Approved',
     'actionbar.concern': 'Mark Concern',
     'actionbar.reject': 'Must Change',
@@ -402,6 +408,7 @@ export const LanguageProvider: React.FC<{children: ReactNode}> = ({ children }) 
   };
 
   return (
+    /* Fixed missing JSX brackets */
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
       {children}
     </LanguageContext.Provider>

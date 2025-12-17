@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import TitleBar from './components/TitleBar';
 import ToolBar from './components/ToolBar';
 import TaskTree from './components/TaskTree';
@@ -33,6 +33,13 @@ const App: React.FC = () => {
       head: 'feature/payment-retry'
   });
 
+  // Current File Context
+  const [activeFilePath, setActiveFilePath] = useState('src/main/java/com/alipay/payment/service/impl/RetryServiceImpl.java');
+  const activeFileExtension = useMemo(() => {
+    const parts = activeFilePath.split('.');
+    return parts.length > 1 ? `.${parts.pop()}` : '';
+  }, [activeFilePath]);
+
   // Layout State
   const [leftWidth, setLeftWidth] = useState(260);
   const [rightWidth, setRightWidth] = useState(300);
@@ -59,9 +66,7 @@ const App: React.FC = () => {
 
   // Initial Load Effect
   useEffect(() => {
-    // If no repo is loaded on startup, prompt user to open one
     if (!isRepoLoaded) {
-      // Small timeout to ensure UI is ready
       const timer = setTimeout(() => setOpenRepoModalOpen(true), 100);
       return () => clearTimeout(timer);
     }
@@ -72,55 +77,40 @@ const App: React.FC = () => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
       e.preventDefault();
-
       if (isResizing === 'left') {
         const newWidth = e.clientX;
-        if (newWidth >= 150 && newWidth <= 600) {
-          setLeftWidth(newWidth);
-        }
+        if (newWidth >= 150 && newWidth <= 600) setLeftWidth(newWidth);
       } else if (isResizing === 'right') {
         const newWidth = window.innerWidth - e.clientX;
-        if (newWidth >= 200 && newWidth <= 800) {
-          setRightWidth(newWidth);
-        }
+        if (newWidth >= 200 && newWidth <= 800) setRightWidth(newWidth);
       }
     };
-
     const handleMouseUp = () => {
       setIsResizing(null);
       document.body.style.cursor = 'default';
-      // Re-enable selection
       document.body.style.userSelect = 'auto';
     };
-
     if (isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
     }
-
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto';
     };
   }, [isResizing]);
 
   const toggleLeft = useCallback(() => setShowLeft(prev => !prev), []);
   const toggleRight = useCallback(() => setShowRight(prev => !prev), []);
-
-  // Derived maximize state: if both panels are hidden, we are maximized
   const isMaximized = !showLeft && !showRight;
 
   const toggleMaximize = useCallback(() => {
     if (isMaximized) {
-      // Restore both (or just defaults)
       setShowLeft(true);
       setShowRight(true);
     } else {
-      // Maximize
       setShowLeft(false);
       setShowRight(false);
     }
@@ -132,30 +122,20 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // --- Handlers for Open Repo Wizard ---
-  
-  // Step 1: Select Repo -> Proceed to Step 2
   const handleOpenRepo = (path: string) => {
     setSelectedRepoPath(path);
     setOpenRepoModalOpen(false);
-    
-    // Trigger Step 2 immediately
     setIsInitialSetup(true);
     setBranchCompareModalOpen(true);
   };
 
-  // Back from Step 2 -> Step 1
   const handleBackToRepoSelection = () => {
       setBranchCompareModalOpen(false);
-      // Small delay for smooth visual transition
       setTimeout(() => setOpenRepoModalOpen(true), 50);
   };
 
-  // Step 2: Select Branches -> Load UI
   const handleApplyBranchCompare = (base: string, head: string) => {
       setDiffContext({ base, head });
-      
-      // If this was part of the initial setup, finalize the load
       if (isInitialSetup) {
           setIsRepoLoaded(true);
           setIsInitialSetup(false);
@@ -163,11 +143,8 @@ const App: React.FC = () => {
       } else {
           showNotification(`Comparing ${base} ← ${head}`);
       }
-      
       setBranchCompareModalOpen(false);
   };
-
-  // --- Other Handlers ---
 
   const handleNewTask = (tab: 'import' | 'create' = 'import') => {
     setNewTaskInitialTab(tab);
@@ -199,7 +176,6 @@ const App: React.FC = () => {
     setSubmitOpen(false);
   };
 
-  // Generalized Action Handler
   const handleAction = (msg: string) => {
     if (msg === "Global Search Activated") { setSearchOpen(true); return; }
     if (msg === "Settings Opened") { setSettingsOpen(true); return; }
@@ -208,6 +184,8 @@ const App: React.FC = () => {
     if (msg === "Question Mode Activated") { setReviewModal({ isOpen: true, type: 'question' }); return; }
     if (msg === "Comment Box Opened") { setReviewModal({ isOpen: true, type: 'comment' }); return; }
     if (msg.includes("Submitting Review")) { setSubmitOpen(true); return; }
+    if (msg.includes("File selected: ")) { setActiveFilePath(msg.replace("File selected: ", "")); return; }
+    if (msg.includes("Opening Diff: ")) { setActiveFilePath(msg.replace("Opening Diff: ", "")); return; }
     if (msg === "Creating Local Task...") { handleNewTask('create'); return; }
     if (msg === "Opening New Task Modal...") { handleNewTask('import'); return; }
     if (msg === "Importing Task...") { handleNewTask('import'); return; }
@@ -215,7 +193,6 @@ const App: React.FC = () => {
     if (msg === "Syncing with Remote...") { setSyncStatusModalOpen(true); return; }
     if (msg === "Start Tour") { setTourOpen(true); return; }
     if (msg === "Switching Branch...") { setIsInitialSetup(false); setBranchCompareModalOpen(true); return; }
-    
     showNotification(msg);
   };
 
@@ -233,80 +210,43 @@ const App: React.FC = () => {
         diffContext={diffContext}
       />
       
-      {/* Resizable Split Pane Area */}
       <div className="flex-1 flex overflow-hidden relative pb-[28px]"> 
-        
-        {/* Left Pane (Task Tree) */}
         {showLeft && (
-          <div 
-            style={{ width: leftWidth }} 
-            className={`shrink-0 h-full flex flex-col ${isResizing ? '' : 'transition-all duration-300 ease-in-out'}`}
-          >
-            <TaskTree 
-              activeTaskId={activeTaskId} 
-              onSelectTask={setActiveTaskId} 
-              onAction={handleAction}
-            />
+          <div style={{ width: leftWidth }} className={`shrink-0 h-full flex flex-col ${isResizing ? '' : 'transition-all duration-300 ease-in-out'}`}>
+            <TaskTree activeTaskId={activeTaskId} onSelectTask={setActiveTaskId} onAction={handleAction} />
           </div>
         )}
 
-        {/* Left Resizer */}
         {showLeft && (
-          <div 
-            className="w-[1px] hover:w-[4px] bg-editor-line hover:bg-editor-accent cursor-col-resize z-20 relative -ml-[1px] hover:-ml-[2px] transition-all duration-100 delay-100 flex items-center justify-center group"
-            onMouseDown={() => setIsResizing('left')}
-          >
-          </div>
+          <div className="w-[1px] hover:w-[4px] bg-editor-line hover:bg-editor-accent cursor-col-resize z-20 relative -ml-[1px] hover:-ml-[2px] transition-all duration-100 delay-100 flex items-center justify-center group" onMouseDown={() => setIsResizing('left')} />
         )}
 
-        {/* Center Pane (Diff View) */}
         <div className="flex-1 min-w-0 h-full border-r border-editor-line relative pb-[56px] flex flex-col">
-          <DiffView 
-            isMaximized={isMaximized} 
-            toggleMaximize={toggleMaximize} 
-            onAction={handleAction}
-            diffContext={diffContext}
-          />
+          <DiffView isMaximized={isMaximized} toggleMaximize={toggleMaximize} onAction={handleAction} diffContext={diffContext} />
           <ActionBar onAction={handleAction} />
         </div>
 
-        {/* Right Resizer */}
         {showRight && (
-          <div 
-             className="w-[1px] hover:w-[4px] bg-editor-line hover:bg-editor-accent cursor-col-resize z-20 relative -mr-[1px] hover:-mr-[2px] transition-all duration-100 delay-100 flex items-center justify-center group"
-             onMouseDown={() => setIsResizing('right')}
-          >
-          </div>
+          <div className="w-[1px] hover:w-[4px] bg-editor-line hover:bg-editor-accent cursor-col-resize z-20 relative -mr-[1px] hover:-mr-[2px] transition-all duration-100 delay-100 flex items-center justify-center group" onMouseDown={() => setIsResizing('right')} />
         )}
 
-        {/* Right Pane (Tabs) */}
         {showRight && (
-          <div 
-            style={{ width: rightWidth }} 
-            className={`shrink-0 h-full flex flex-col ${isResizing ? '' : 'transition-all duration-300 ease-in-out'}`}
-          >
-            <RightPanel onAction={handleAction} />
+          <div style={{ width: rightWidth }} className={`shrink-0 h-full flex flex-col ${isResizing ? '' : 'transition-all duration-300 ease-in-out'}`}>
+            <RightPanel onAction={handleAction} activeFileExtension={activeFileExtension} />
           </div>
         )}
       </div>
 
-      {/* Status Bar */}
       <div className="absolute bottom-0 w-full z-50">
          <StatusBar />
       </div>
 
-      {/* --- MODALS --- */}
       <Modal isOpen={openRepoModalOpen} onClose={() => { if(isRepoLoaded) setOpenRepoModalOpen(false); }} title={t('modal.open_repo.step1')}>
         <OpenRepoModal onClose={() => { if(isRepoLoaded) setOpenRepoModalOpen(false); }} onOpen={handleOpenRepo} />
       </Modal>
 
       <Modal isOpen={newTaskModalOpen} onClose={() => setNewTaskModalOpen(false)} title={t('modal.new_task.title')}>
-        <NewTaskModal 
-            onClose={() => setNewTaskModalOpen(false)} 
-            onImport={handleImportTask}
-            onCreate={handleCreateTask}
-            initialTab={newTaskInitialTab}
-        />
+        <NewTaskModal onClose={() => setNewTaskModalOpen(false)} onImport={handleImportTask} onCreate={handleCreateTask} initialTab={newTaskInitialTab} />
       </Modal>
 
       <Modal isOpen={searchOpen} onClose={() => setSearchOpen(false)} title="Go to File or Command">
@@ -334,20 +274,11 @@ const App: React.FC = () => {
       </Modal>
       
       <Modal isOpen={branchCompareModalOpen} onClose={() => { if(isRepoLoaded) setBranchCompareModalOpen(false); }} title={t('modal.branch_compare.title')}>
-        <BranchCompareModal 
-            currentBase={diffContext.base}
-            currentHead={diffContext.head}
-            isInitialSetup={isInitialSetup}
-            onClose={() => { if(isRepoLoaded) setBranchCompareModalOpen(false); }} 
-            onApply={handleApplyBranchCompare}
-            onBack={handleBackToRepoSelection}
-        />
+        <BranchCompareModal currentBase={diffContext.base} currentHead={diffContext.head} isInitialSetup={isInitialSetup} onClose={() => { if(isRepoLoaded) setBranchCompareModalOpen(false); }} onApply={handleApplyBranchCompare} onBack={handleBackToRepoSelection} />
       </Modal>
 
-      {/* Tour Guide */}
       <TourGuide isOpen={tourOpen} onClose={() => setTourOpen(false)} />
 
-      {/* Toast Notification */}
       {notification && (
         <div className="absolute top-[100px] left-1/2 -translate-x-1/2 bg-editor-selection text-white px-4 py-2 rounded shadow-xl z-[150] animate-fade-in-down border border-editor-accent/50 text-xs font-bold tracking-wide pointer-events-none">
           {notification}

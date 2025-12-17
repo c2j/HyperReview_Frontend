@@ -39,4 +39,5 @@ export interface ReviewGuideItem {
   description: string;
   severity: 'high' | 'medium' | 'low';
   referenceUrl?: string;
+  applicableExtensions: string[]; // 新增：适用的文件后缀，如 ['.java', '.xml']
 }

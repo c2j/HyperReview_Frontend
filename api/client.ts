@@ -9,66 +9,55 @@ import { ReviewSeverity } from './types';
 // 在当前演示环境中默认为 true，实际项目中使用 import.meta.env.VITE_MOCK === 'true'
 const MOCK = true; 
 
-// Tauri IPC window interface extension
-declare global {
-  interface Window {
-    __TAURI_IPC__?: any;
-    __TAURI__?: {
-        invoke: (cmd: string, args?: any) => Promise<any>;
-    };
-    showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
-  }
-}
-
 // --- Exports ---
 
 export const getRecentRepos = (): Promise<Repo[]> =>
-  MOCK ? mockGetRecentRepos() : isTauri() ? tauriGetRecentRepos() : httpGetRecentRepos();
+  MOCK ? mockGetRecentRepos() : Promise.resolve([]);
 
 export const getBranches = (): Promise<Branch[]> => 
-  MOCK ? mockGetBranches() : isTauri() ? invoke('get_branches') : httpGetBranches();
+  MOCK ? mockGetBranches() : Promise.resolve([]);
 
 export const getTasks = (type: 'pending' | 'watched'): Promise<Task[]> => 
-  MOCK ? mockGetTasks(type) : isTauri() ? invoke('get_tasks', { type }) : httpGetTasks(type);
+  MOCK ? mockGetTasks(type) : Promise.resolve([]);
 
 export const getLocalTasks = (): Promise<Task[]> => 
-  MOCK ? mockGetLocalTasks() : isTauri() ? invoke('get_local_tasks') : httpGetLocalTasks();
+  MOCK ? mockGetLocalTasks() : Promise.resolve([]);
 
 export const getFileTree = (): Promise<FileNode[]> => 
-  MOCK ? mockGetFileTree() : isTauri() ? invoke('get_file_tree') : httpGetFileTree();
+  MOCK ? mockGetFileTree() : Promise.resolve([]);
 
 export const getFileDiff = (fileId: string): Promise<DiffLine[]> => 
-  MOCK ? mockGetFileDiff(fileId) : isTauri() ? invoke('get_file_diff', { fileId }) : httpGetFileDiff(fileId);
+  MOCK ? mockGetFileDiff(fileId) : Promise.resolve([]);
 
 export const getHeatmap = (): Promise<HeatmapItem[]> =>
-  MOCK ? mockGetHeatmap() : isTauri() ? invoke('get_heatmap') : httpGetHeatmap();
+  MOCK ? mockGetHeatmap() : Promise.resolve([]);
 
 export const getBlame = (fileId: string): Promise<BlameInfo> =>
-  MOCK ? mockGetBlame(fileId) : isTauri() ? invoke('get_blame', { fileId }) : httpGetBlame(fileId);
+  MOCK ? mockGetBlame(fileId) : Promise.resolve({} as any);
 
 export const getReviewStats = (): Promise<ReviewStats> =>
-  MOCK ? mockGetReviewStats() : isTauri() ? invoke('get_review_stats') : httpGetReviewStats();
+  MOCK ? mockGetReviewStats() : Promise.resolve({} as any);
 
 export const getChecklist = (): Promise<ChecklistItem[]> =>
-  MOCK ? mockGetChecklist() : isTauri() ? invoke('get_checklist') : httpGetChecklist();
+  MOCK ? mockGetChecklist() : Promise.resolve([]);
 
 export const getReviewGuide = (): Promise<ReviewGuideItem[]> =>
-  MOCK ? mockGetReviewGuide() : isTauri() ? invoke('get_review_guide') : Promise.resolve([]);
+  MOCK ? mockGetReviewGuide() : Promise.resolve([]);
 
 export const getTags = (): Promise<Tag[]> =>
-  MOCK ? mockGetTags() : isTauri() ? invoke('get_tags') : httpGetTags();
+  MOCK ? mockGetTags() : Promise.resolve([]);
 
 export const getCommands = (): Promise<SearchResult[]> =>
-  MOCK ? mockGetCommands() : isTauri() ? invoke('get_commands') : httpGetCommands();
+  MOCK ? mockGetCommands() : Promise.resolve([]);
 
 export const getReviewTemplates = (): Promise<ReviewTemplate[]> =>
-  MOCK ? mockGetReviewTemplates() : isTauri() ? invoke('get_review_templates') : httpGetReviewTemplates();
+  MOCK ? mockGetReviewTemplates() : Promise.resolve([]);
 
 export const getQualityGates = (): Promise<QualityGate[]> =>
-  MOCK ? mockGetQualityGates() : isTauri() ? invoke('get_quality_gates') : httpGetQualityGates();
+  MOCK ? mockGetQualityGates() : Promise.resolve([]);
 
 export const openLocalRepoDialog = (): Promise<string | null> =>
-  MOCK ? mockOpenLocalRepoDialog() : isTauri() ? invoke('open_repo_dialog') : httpOpenLocalRepoDialog();
+  MOCK ? mockOpenLocalRepoDialog() : Promise.resolve(null);
 
 
 /* --------- Mock Implementations --------- */
@@ -79,88 +68,32 @@ async function mockGetRecentRepos(): Promise<Repo[]> {
     { path: '~/work/payment-service', branch: 'feature/payment-retry', lastOpened: '2 mins ago' },
     { path: '~/work/auth-center', branch: 'master', lastOpened: '1 hour ago' },
     { path: '~/work/legacy-monolith', branch: 'hotfix/npe-fix', lastOpened: '2 days ago' },
-    { path: '~/personal/dotfiles', branch: 'main', lastOpened: '1 week ago' },
-    { path: '~/infrastructure/k8s-configs', branch: 'staging', lastOpened: '2 weeks ago' },
   ];
 }
 
 async function mockGetBranches(): Promise<Branch[]> {
-  await new Promise(r => setTimeout(r, 150));
   return [
     { name: 'master' },
     { name: 'main' },
-    { name: 'develop' },
     { name: 'feature/payment-retry' },
-    { name: 'feature/auth-refactor' },
-    { name: 'hotfix/login-issue' },
-    { name: 'release/v3.1.0' }
   ];
 }
 
 async function mockGetTasks(type: 'pending' | 'watched'): Promise<Task[]> {
-  await new Promise(r => setTimeout(r, 100));
   if (type === 'pending') {
     return [
       { id: '1', title: 'PR#2877 Pay Retry Refactor', status: 'active' },
       { id: '2', title: 'PR#2871 Auth Center Update', status: 'pending', unreadCount: 1 },
-      { id: '3', title: 'PR#2869 Oracle Proc Opt', status: 'pending' },
-    ];
-  } else {
-    return [
-      { id: '5', title: 'PR#2847 Async Task Refactor', status: 'pending', unreadCount: 3 },
-      { id: '6', title: 'PR#2899 Kafka Consumer Fix', status: 'pending' },
     ];
   }
+  return [];
 }
 
 async function mockGetLocalTasks(): Promise<Task[]> {
-  await new Promise(r => setTimeout(r, 150));
-  return [
-    { 
-      id: 'local-1', 
-      title: 'SQL Audit: Order Table', 
-      type: 'sql',
-      status: 'active',
-      files: [
-        { id: 'f1', name: 'OrderMapper.xml', path: 'src/main/resources/mapper/OrderMapper.xml', status: 'modified' },
-        { id: 'f2', name: 'init_order.sql', path: 'db/migrations/V1__init_order.sql', status: 'added' }
-      ]
-    },
-    { 
-      id: 'local-2', 
-      title: 'Security Review: Login', 
-      type: 'security',
-      status: 'pending',
-      files: [
-        { id: 'f3', name: 'AuthController.java', path: 'src/main/java/web/AuthController.java', status: 'modified' }
-      ]
-    },
-    { 
-      id: 'local-3', 
-      title: 'Manual Check: Configs', 
-      type: 'general',
-      status: 'completed',
-      files: [
-        { id: 'f4', name: 'application.yml', path: 'src/main/resources/application.yml', status: 'modified' },
-        { id: 'f5', name: 'Dockerfile', path: 'Dockerfile', status: 'modified' }
-      ]
-    },
-    {
-      id: 'local-4',
-      title: 'Refactor: Utils',
-      type: 'code',
-      status: 'pending',
-      files: [
-        { id: 'f6', name: 'StringUtils.java', path: 'src/main/common/StringUtils.java', status: 'modified' },
-        { id: 'f7', name: 'DateUtils.java', path: 'src/main/common/DateUtils.java', status: 'deleted' },
-        { id: 'f8', name: 'NumberUtils.java', path: 'src/main/common/NumberUtils.java', status: 'added' }
-      ]
-    }
-  ];
+  return [];
 }
 
 async function mockGetFileTree(): Promise<FileNode[]> {
-  await new Promise(r => setTimeout(r, 200));
   return [
     {
       id: 'src',
@@ -170,115 +103,43 @@ async function mockGetFileTree(): Promise<FileNode[]> {
       status: 'none',
       children: [
         {
-          id: 'main',
-          name: 'main',
-          path: '/src/main',
-          type: 'folder',
-          status: 'none',
-          children: [
-            {
-              id: 'java',
-              name: 'java',
-              path: '/src/main/java',
-              type: 'folder',
-              status: 'none',
-              children: [
-                {
-                  id: 'com',
-                  name: 'com',
-                  path: '/src/main/java/com',
-                  type: 'folder',
-                  status: 'none',
-                  children: [
-                    {
-                      id: 'service',
-                      name: 'RetryServiceImpl.java',
-                      path: '/src/main/java/.../RetryServiceImpl.java',
-                      type: 'file',
-                      status: 'modified',
-                      stats: { added: 342, removed: 108 }
-                    },
-                     {
-                      id: 'controller',
-                      name: 'PaymentController.java',
-                      path: '/src/main/java/.../PaymentController.java',
-                      type: 'file',
-                      status: 'modified',
-                      stats: { added: 12, removed: 5 }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
+          id: 'service',
+          name: 'RetryServiceImpl.java',
+          path: '/src/.../RetryServiceImpl.java',
+          type: 'file',
+          status: 'modified',
+          stats: { added: 342, removed: 108 }
         }
       ]
-    },
-    {
-      id: 'pom',
-      name: 'pom.xml',
-      path: '/pom.xml',
-      type: 'file',
-      status: 'modified',
-      stats: { added: 5, removed: 0 }
     }
   ];
 }
 
 async function mockGetFileDiff(fileId: string): Promise<DiffLine[]> {
-  await new Promise(r => setTimeout(r, 300));
   return [
-    { oldLineNumber: 1, newLineNumber: 1, content: 'import java.util.List;', type: 'context' },
-    { oldLineNumber: 2, newLineNumber: 2, content: 'import java.util.Map;', type: 'context' },
-    { oldLineNumber: 3, newLineNumber: 3, content: 'import lombok.extern.slf4j.Slf4j;', type: 'context' },
-    { oldLineNumber: 4, newLineNumber: 4, content: 'import org.springframework.stereotype.Service;', type: 'context' },
-    { oldLineNumber: 5, newLineNumber: 5, content: 'import com.alipay.payment.mapper.OrderMapper;', type: 'context' },
-    { oldLineNumber: 6, newLineNumber: 6, content: '', type: 'context' },
-    { oldLineNumber: 7, newLineNumber: 7, content: '@Slf4j', type: 'context' },
-    { oldLineNumber: 8, newLineNumber: 8, content: '@Service', type: 'context' },
-    { oldLineNumber: 9, newLineNumber: 9, content: '@RequiredArgsConstructor', type: 'context' },
-    { oldLineNumber: 10, newLineNumber: 10, content: 'public class RetryServiceImpl implements RetryService {', type: 'context' },
-    { oldLineNumber: 11, newLineNumber: 11, content: '', type: 'context' },
-    { oldLineNumber: 101, content: '    public void retry(String orderId) {', type: 'context' },
-    { oldLineNumber: 102, content: '        // Old logic was here', type: 'removed' },
-    { newLineNumber: 125, content: '        log.info("Starting retry process for order: {}", orderId);', type: 'added' },
-    { newLineNumber: 126, content: '        Order order = orderMapper.selectById(orderId);', type: 'added' },
-    { newLineNumber: 127, content: '        orderMapper.updateStatus(orderId, OrderStatus.RETRYING);', type: 'added', severity: ReviewSeverity.WARNING, message: 'Potential N+1 Query Risk' },
-    { newLineNumber: 128, content: '        // TODO: Add distributed lock', type: 'added', severity: ReviewSeverity.ERROR, message: 'Missing @Transactional annotation' },
-    { newLineNumber: 129, content: '    }', type: 'context' },
-    { oldLineNumber: 105, newLineNumber: 130, content: '', type: 'context' },
-    { oldLineNumber: 106, newLineNumber: 131, content: '    private void validate(Order order) {', type: 'context' },
-    { oldLineNumber: 107, newLineNumber: 132, content: '        if (order == null) throw new IllegalArgumentException();', type: 'context' },
+    { oldLineNumber: 1, newLineNumber: 1, content: 'public class RetryServiceImpl {', type: 'context' },
   ];
 }
 
 async function mockGetHeatmap(): Promise<HeatmapItem[]> {
-  await new Promise(r => setTimeout(r, 200));
   return [
-    { id: '1', name: 'RetryServiceImpl.java', path: 'src/main/java/com/alipay/payment/service/impl/RetryServiceImpl.java', impact: 'high', score: 92 },
-    { id: '2', name: 'PaymentController.java', path: 'src/main/java/com/alipay/payment/web/PaymentController.java', impact: 'high', score: 88 },
-    { id: '3', name: 'OrderMapper.xml', path: 'src/main/resources/mapper/OrderMapper.xml', impact: 'medium', score: 65 },
-    { id: '4', name: 'AbstractPayment.java', path: 'src/main/java/com/alipay/payment/base/AbstractPayment.java', impact: 'medium', score: 54 },
-    { id: '5', name: 'PaymentUtils.java', path: 'src/main/java/com/alipay/payment/util/PaymentUtils.java', impact: 'low', score: 30 },
-    { id: '6', name: 'application-prod.yml', path: 'src/main/resources/application-prod.yml', impact: 'low', score: 15 },
+    { id: '1', name: 'RetryServiceImpl.java', path: '.../RetryServiceImpl.java', impact: 'high', score: 92 },
   ];
 }
 
 async function mockGetBlame(fileId: string): Promise<BlameInfo> {
-  await new Promise(r => setTimeout(r, 150));
   return {
     author: 'alice',
     avatar: 'A',
     time: '2025-11-20 18:33',
-    prName: 'PR#2711 "Introduce Retry State Machine"',
+    prName: 'PR#2711',
     reviewer: 'ferris',
-    reviewerStatus: 'LGTM with nit',
-    comment: '"This part might cause a deadlock, added lock optimization."'
+    reviewerStatus: 'LGTM',
+    comment: 'Fixing deadlock.'
   };
 }
 
 async function mockGetReviewStats(): Promise<ReviewStats> {
-  await new Promise(r => setTimeout(r, 200));
   return {
     reviewedCount: 73,
     totalCount: 127,
@@ -290,113 +151,42 @@ async function mockGetReviewStats(): Promise<ReviewStats> {
 }
 
 async function mockGetChecklist(): Promise<ChecklistItem[]> {
-  await new Promise(r => setTimeout(r, 100));
   return [
-    { id: '1', text: 'src/main/java/com/alipay/**/*.java', checked: false },
-    { id: '2', text: 'src/main/resources/mapper/*Payment*.xml', checked: false },
-    { id: '3', text: 'db/procedure/pkg_payment.pkb L200-500', checked: false },
+    { id: '1', text: 'Check SQL Injection', checked: false },
   ];
 }
 
 async function mockGetReviewGuide(): Promise<ReviewGuideItem[]> {
   await new Promise(r => setTimeout(r, 200));
   return [
-    { id: 'g1', category: 'security', severity: 'high', title: 'SQL 注入风险 (SQLi)', description: '检查 XML Mapper 中是否使用了 ${} 而非 #{} 进行参数绑定。' },
-    { id: 'g2', category: 'performance', severity: 'medium', title: '潜在 N+1 查询', description: '循环体内部调用了数据库查询或 RPC 接口，建议使用 Batch 模式。' },
-    { id: 'g3', category: 'logic', severity: 'high', title: '事务边界缺失', description: '涉及多表更新的服务方法必须标注 @Transactional。' },
-    { id: 'g4', category: 'style', severity: 'low', title: '魔法数字', description: '硬编码的超时时间或状态码建议提取为常量。' },
-    { id: 'g5', category: 'performance', severity: 'high', title: '连接未关闭', description: '检查 Stream 或 HttpClient 是否在 finally 块中关闭。' },
+    { id: 'g1', category: 'security', severity: 'high', title: 'SQL 注入风险 (SQLi)', description: '检查 XML Mapper 中是否使用了 ${} 而非 #{}。', applicableExtensions: ['.java', '.xml', '.sql'] },
+    { id: 'g2', category: 'performance', severity: 'medium', title: '潜在 N+1 查询', description: '循环体内调用了 DB/RPC 接口，建议使用批量模式。', applicableExtensions: ['.java', '.ts', '.js'] },
+    { id: 'g3', category: 'logic', severity: 'high', title: '事务边界缺失', description: '涉及多表更新的操作必须标注 @Transactional。', applicableExtensions: ['.java'] },
+    { id: 'g4', category: 'style', severity: 'low', title: '魔法数字', description: '硬编码的超时时间或状态码建议提取为常量。', applicableExtensions: ['.java', '.ts', '.js', '.c', '.cpp'] },
+    { id: 'g5', category: 'performance', severity: 'high', title: '连接未关闭', description: '检查 Stream 或 HttpClient 是否在 finally 块中关闭。', applicableExtensions: ['.java', '.py'] },
+    { id: 'g6', category: 'security', severity: 'high', title: '敏感配置明文', description: '检查 .yml 或 .properties 是否存在明文密码。', applicableExtensions: ['.yml', '.yaml', '.properties', '.xml'] },
+    { id: 'g7', category: 'logic', severity: 'medium', title: '前端金额计算风险', description: '涉及支付金额的计算应放在后端，前端仅作展示。', applicableExtensions: ['.js', '.ts', '.tsx', '.jsx'] },
   ];
 }
 
 async function mockGetTags(): Promise<Tag[]> {
-  await new Promise(r => setTimeout(r, 100));
   return [
-    { id: 1, label: 'Severe N+1', color: 'bg-editor-error' },
-    { id: 2, label: 'No Tx', color: 'bg-editor-error' },
-    { id: 3, label: 'Hardcoded', color: 'bg-editor-warning' },
-    { id: 4, label: 'Typo', color: 'bg-editor-info' },
+    { id: 1, label: 'N+1', color: 'bg-editor-error' },
   ];
 }
 
 async function mockGetCommands(): Promise<SearchResult[]> {
-  await new Promise(r => setTimeout(r, 150));
-  return [
-    { type: 'file', label: 'RetryServiceImpl.java', desc: 'src/main/java/.../impl' },
-    { type: 'file', label: 'PaymentController.java', desc: 'src/main/java/.../web' },
-    { type: 'symbol', label: 'method: updateStatus', desc: 'RetryServiceImpl.java' },
-    { type: 'symbol', label: 'const: MAX_RETRY_COUNT', desc: 'RetryConfig.java' },
-    { type: 'cmd', label: 'Toggle Vim Mode', desc: 'Settings' },
-    { type: 'cmd', label: 'Fold All Regions', desc: 'View' },
-  ];
+  return [];
 }
 
 async function mockGetReviewTemplates(): Promise<ReviewTemplate[]> {
-  await new Promise(r => setTimeout(r, 100));
-  return [
-    { id: 'tx', label: 'Missing Transaction', content: 'Transaction boundary is missing for this composite operation.' },
-    { id: 'n1', label: 'Potential N+1', content: 'This loop triggers a query for each iteration. Consider fetching in batch.' },
-    { id: 'sql', label: 'Hardcoded SQL', content: 'SQL should be moved to XML mapper or repository class.' },
-    { id: 'log', label: 'Missing Log', content: 'Please add log for this critical path.' },
-    { id: 'sec', label: 'XSS Vulnerability', content: 'Unsanitized input detected here.' },
-  ];
+  return [];
 }
 
 async function mockGetQualityGates(): Promise<QualityGate[]> {
-  await new Promise(r => setTimeout(r, 600));
-  return [
-    { id: 'ci', name: 'CI Pipeline', status: 'passed', message: 'Build #8821 success' },
-    { id: 'test', name: 'Unit Tests', status: 'passed', message: '100% (42/42)' },
-    { id: 'cov', name: 'Code Coverage', status: 'warning', message: '82% (Target 85%)' },
-    { id: 'sec', name: 'Security Scan', status: 'passed', message: 'No high risks found' },
-  ];
+  return [];
 }
 
 async function mockOpenLocalRepoDialog(): Promise<string | null> {
-  // Try to use native API if available for better realism
-  if (typeof window !== 'undefined' && window.showDirectoryPicker) {
-     try {
-       const handle = await window.showDirectoryPicker();
-       // In a real app we'd keep the handle, but here we just return a simulated path using the directory name
-       return `/local/${handle.name}`;
-     } catch (err) {
-       // User cancelled
-       return null;
-     }
-  }
-
-  await new Promise(r => setTimeout(r, 600));
-  return "/home/user/workspace/new-feature-repo";
+  return "/home/user/repo";
 }
-
-/* --------- IPC / HTTP Placeholders --------- */
-
-function isTauri() {
-  return !!window.__TAURI_IPC__ || !!window.__TAURI__;
-}
-
-// Helper to bridge calls
-const invoke = window.__TAURI__?.invoke || ((() => Promise.resolve([])) as any);
-
-async function tauriGetRecentRepos(): Promise<Repo[]> { return invoke('get_recent_repos'); }
-
-async function httpGetRecentRepos(): Promise<Repo[]> {
-  const response = await fetch('/api/recent-repos');
-  if (!response.ok) throw new Error('Network error');
-  return response.json();
-}
-
-async function httpGetBranches(): Promise<Branch[]> { return []; }
-async function httpGetTasks(type: string): Promise<Task[]> { return []; }
-async function httpGetLocalTasks(): Promise<Task[]> { return []; }
-async function httpGetFileTree(): Promise<FileNode[]> { return []; }
-async function httpGetFileDiff(fileId: string): Promise<DiffLine[]> { return []; }
-async function httpGetHeatmap(): Promise<HeatmapItem[]> { return []; }
-async function httpGetBlame(fileId: string): Promise<BlameInfo> { return {} as any; }
-async function httpGetReviewStats(): Promise<ReviewStats> { return {} as any; }
-async function httpGetChecklist(): Promise<ChecklistItem[]> { return []; }
-async function httpGetTags(): Promise<Tag[]> { return []; }
-async function httpGetCommands(): Promise<SearchResult[]> { return []; }
-async function httpGetReviewTemplates(): Promise<ReviewTemplate[]> { return []; }
-async function httpGetQualityGates(): Promise<QualityGate[]> { return []; }
-async function httpOpenLocalRepoDialog(): Promise<string | null> { return null; }

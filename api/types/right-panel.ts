@@ -1,7 +1,10 @@
+
 export interface HeatmapItem {
   id: string;
   name: string;
+  path: string;
   impact: 'high' | 'medium' | 'low';
+  score: number; // 0-100 impact factor
 }
 
 export interface BlameInfo {

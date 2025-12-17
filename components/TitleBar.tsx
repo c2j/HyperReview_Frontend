@@ -27,12 +27,12 @@ const TitleBar: React.FC<TitleBarProps> = ({ onAction }) => {
       </div>
 
       {/* Center Section */}
-      <div className="text-xs text-editor-accent font-medium tracking-wider uppercase shrink-0 hidden md:block">
+      <div className="text-editor-accent font-medium tracking-wider uppercase shrink-0 hidden md:block">
         {t('titlebar.mode')}
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-4 flex-1 justify-end min-w-0 ml-4">
+      <div className="flex text-xs  items-center gap-4 flex-1 justify-end min-w-0 ml-4">
         <div className="flex items-center gap-2 bg-editor-line/20 px-3 py-1.5 rounded border border-editor-line/50 cursor-help shrink min-w-0 max-w-[200px]"
              onClick={() => onAction("Semantic Context: Order Timeout")}>
           <div className="w-2 h-2 rounded-full bg-editor-info animate-pulse shrink-0"></div>

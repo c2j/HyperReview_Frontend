@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { Layers, History, PieChart, ListChecks, GripVertical, CheckSquare, Square, Trash2, Loader2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { getHeatmap, getBlame, getReviewStats, getChecklist } from '../api/client';
@@ -108,6 +109,23 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
     onAction("Reordered Pending List");
   };
 
+  // Heatmap Statistics
+  const heatmapStats = useMemo(() => {
+      const stats = { high: 0, medium: 0, low: 0, total: 0, avgScore: 0 };
+      if (!heatmapData.length) return stats;
+
+      let totalScore = 0;
+      heatmapData.forEach(item => {
+          stats.total++;
+          totalScore += item.score;
+          if (item.impact === 'high') stats.high++;
+          else if (item.impact === 'medium') stats.medium++;
+          else stats.low++;
+      });
+      stats.avgScore = Math.round(totalScore / stats.total);
+      return stats;
+  }, [heatmapData]);
+
   return (
     <div id="tour-right-panel" className="h-full bg-editor-sidebar border-l border-editor-line flex flex-col">
         {/* Tabs */}
@@ -152,29 +170,57 @@ const RightPanel: React.FC<RightPanelProps> = ({ onAction }) => {
             ) : (
             <>
             {activeTab === Tab.HEATMAP && (
-                <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase">{t('rightpanel.heatmap.title')}</h3>
-                    <div className="text-[11px] text-gray-500 mb-2">{t('rightpanel.heatmap.desc')}</div>
+                 <div className="flex flex-col h-full">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase mb-2 shrink-0">{t('rightpanel.heatmap.title')}</h3>
                     
-                    <div className="grid grid-cols-2 gap-2">
-                        {heatmapData.map(item => {
-                            const borderColor = item.impact === 'high' ? 'border-editor-error/40' : item.impact === 'medium' ? 'border-editor-error/20' : 'border-gray-600';
-                            const opacity = item.impact === 'high' ? 'opacity-20' : item.impact === 'medium' ? 'opacity-10' : 'opacity-0';
-                            const textColor = item.impact === 'low' ? 'text-gray-300' : 'text-white';
-                            
-                            return (
-                                <div key={item.id} className={`bg-editor-line p-3 rounded border ${borderColor} relative overflow-hidden group cursor-pointer hover:border-white transition-colors`}
-                                     onClick={() => onAction(`Focus: ${item.name} Module`)}>
-                                    {item.impact !== 'low' && <div className={`absolute inset-0 bg-editor-error ${opacity}`}></div>}
-                                    <span className={`font-bold relative ${textColor}`}>{item.name}</span>
-                                    <div className="mt-2 text-[10px] text-gray-400 relative">
-                                        {item.impact === 'high' ? t('rightpanel.heatmap.impact.high') : 
-                                         item.impact === 'medium' ? t('rightpanel.heatmap.impact.medium') : 
-                                         t('rightpanel.heatmap.impact.low')}
-                                    </div>
+                    {/* Stats Header */}
+                    <div className="bg-editor-line/30 p-3 rounded mb-4 shrink-0 border border-editor-line">
+                        <div className="text-xs text-gray-400 mb-2 font-medium">Global Impact Score</div>
+                        <div className="flex items-end gap-2 mb-3">
+                             <span className="text-2xl font-bold text-white">
+                                {heatmapStats.avgScore}
+                             </span>
+                             <span className="text-[10px] text-gray-500 mb-1">/ 100</span>
+                        </div>
+                        
+                        <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-editor-bg">
+                            <div className="bg-editor-error" style={{ width: `${(heatmapStats.high / heatmapStats.total) * 100}%` }}></div>
+                            <div className="bg-editor-warning" style={{ width: `${(heatmapStats.medium / heatmapStats.total) * 100}%` }}></div>
+                            <div className="bg-editor-info" style={{ width: `${(heatmapStats.low / heatmapStats.total) * 100}%` }}></div>
+                        </div>
+                        <div className="flex justify-between mt-2 text-[10px] text-gray-500">
+                            <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-editor-error"></div> High ({heatmapStats.high})</div>
+                            <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-editor-warning"></div> Med ({heatmapStats.medium})</div>
+                            <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-editor-info"></div> Low ({heatmapStats.low})</div>
+                        </div>
+                    </div>
+
+                    {/* File List */}
+                    <div className="flex-1 overflow-y-auto space-y-1 pr-1">
+                        {heatmapData.map(item => (
+                            <div 
+                                key={item.id} 
+                                onClick={() => onAction(`Opening Diff: ${item.path}`)}
+                                className="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-editor-line/50 group border border-transparent hover:border-editor-line/50 transition-colors"
+                            >
+                                {/* Impact Indicator */}
+                                <div className={`w-1 h-8 rounded-full shrink-0 ${
+                                    item.impact === 'high' ? 'bg-editor-error shadow-[0_0_8px_rgba(241,76,76,0.5)]' : 
+                                    item.impact === 'medium' ? 'bg-editor-warning' : 'bg-editor-info'
+                                }`}></div>
+
+                                <div className="flex-1 min-w-0">
+                                     <div className="flex justify-between items-center mb-0.5">
+                                         <span className="text-xs font-medium text-gray-300 group-hover:text-white truncate">{item.name}</span>
+                                         <span className={`text-[10px] font-bold ${
+                                             item.impact === 'high' ? 'text-editor-error' : 
+                                             item.impact === 'medium' ? 'text-editor-warning' : 'text-gray-500'
+                                         }`}>{item.score}</span>
+                                     </div>
+                                     <div className="text-[10px] text-gray-600 truncate font-mono">{item.path}</div>
                                 </div>
-                            );
-                        })}
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}

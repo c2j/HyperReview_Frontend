@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Upload, GitBranch, ChevronDown, Tag, PanelLeft, PanelRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { FolderOpen, Upload, GitBranch, ChevronDown, Tag, PanelLeft, PanelRight, ArrowLeft, Loader2, Plus } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { getTags } from '../api/client';
 import type { Tag as TagType } from '../api/types';
@@ -7,7 +8,7 @@ import type { Tag as TagType } from '../api/types';
 interface ToolBarProps {
   onAction: (msg: string) => void;
   onOpenRepo?: () => void;
-  onImportTask?: () => void;
+  onNewTask?: () => void;
   showLeft?: boolean;
   showRight?: boolean;
   onToggleLeft?: () => void;
@@ -18,7 +19,7 @@ interface ToolBarProps {
 const ToolBar: React.FC<ToolBarProps> = ({ 
   onAction, 
   onOpenRepo, 
-  onImportTask,
+  onNewTask,
   showLeft = true,
   showRight = true,
   onToggleLeft,
@@ -67,9 +68,9 @@ const ToolBar: React.FC<ToolBarProps> = ({
                 <FolderOpen size={14} /> {t('toolbar.open_repo')}
             </button>
             <button 
-                onClick={onImportTask ? onImportTask : () => onAction("Importing Task...")}
+                onClick={onNewTask ? onNewTask : () => onAction("Opening New Task Modal...")}
                 className="flex items-center gap-1.5 px-3 py-1 bg-editor-line hover:bg-editor-line/80 text-editor-fg rounded transition-colors active:scale-95">
-                <Upload size={14} /> {t('toolbar.import_task')}
+                <Plus size={14} /> {t('toolbar.new_task')}
             </button>
         </div>
 

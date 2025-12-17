@@ -1,6 +1,7 @@
+
 import type { 
   Repo, Branch, Task, DiffLine, HeatmapItem, BlameInfo, ReviewStats, 
-  ChecklistItem, Tag, SearchResult, ReviewTemplate, QualityGate 
+  ChecklistItem, Tag, SearchResult, ReviewTemplate, QualityGate, FileNode
 } from './types';
 import { ReviewSeverity } from './types';
 
@@ -28,6 +29,12 @@ export const getBranches = (): Promise<Branch[]> =>
 
 export const getTasks = (type: 'pending' | 'watched'): Promise<Task[]> => 
   MOCK ? mockGetTasks(type) : isTauri() ? invoke('get_tasks', { type }) : httpGetTasks(type);
+
+export const getLocalTasks = (): Promise<Task[]> => 
+  MOCK ? mockGetLocalTasks() : isTauri() ? invoke('get_local_tasks') : httpGetLocalTasks();
+
+export const getFileTree = (): Promise<FileNode[]> => 
+  MOCK ? mockGetFileTree() : isTauri() ? invoke('get_file_tree') : httpGetFileTree();
 
 export const getFileDiff = (fileId: string): Promise<DiffLine[]> => 
   MOCK ? mockGetFileDiff(fileId) : isTauri() ? invoke('get_file_diff', { fileId }) : httpGetFileDiff(fileId);
@@ -64,7 +71,6 @@ export const openLocalRepoDialog = (): Promise<string | null> =>
 
 async function mockGetRecentRepos(): Promise<Repo[]> {
   await new Promise(r => setTimeout(r, 200)); 
-  // 为了演示空状态效果，您可以暂时返回空数组 []，或者保持原样
   return [
     { path: '~/work/payment-service', branch: 'feature/payment-retry', lastOpened: '2 mins ago' },
     { path: '~/work/auth-center', branch: 'master', lastOpened: '1 hour ago' },
@@ -94,13 +100,125 @@ async function mockGetTasks(type: 'pending' | 'watched'): Promise<Task[]> {
       { id: '1', title: 'PR#2877 Pay Retry Refactor', status: 'active' },
       { id: '2', title: 'PR#2871 Auth Center Update', status: 'pending', unreadCount: 1 },
       { id: '3', title: 'PR#2869 Oracle Proc Opt', status: 'pending' },
-      { id: '4', title: 'Local#11 SQL Review', status: 'pending' },
     ];
   } else {
     return [
       { id: '5', title: 'PR#2847 Async Task Refactor', status: 'pending', unreadCount: 3 },
+      { id: '6', title: 'PR#2899 Kafka Consumer Fix', status: 'pending' },
     ];
   }
+}
+
+async function mockGetLocalTasks(): Promise<Task[]> {
+  await new Promise(r => setTimeout(r, 150));
+  return [
+    { 
+      id: 'local-1', 
+      title: 'SQL Audit: Order Table', 
+      type: 'sql',
+      status: 'active',
+      files: [
+        { id: 'f1', name: 'OrderMapper.xml', path: 'src/main/resources/mapper/OrderMapper.xml', status: 'modified' },
+        { id: 'f2', name: 'init_order.sql', path: 'db/migrations/V1__init_order.sql', status: 'added' }
+      ]
+    },
+    { 
+      id: 'local-2', 
+      title: 'Security Review: Login', 
+      type: 'security',
+      status: 'pending',
+      files: [
+        { id: 'f3', name: 'AuthController.java', path: 'src/main/java/web/AuthController.java', status: 'modified' }
+      ]
+    },
+    { 
+      id: 'local-3', 
+      title: 'Manual Check: Configs', 
+      type: 'general',
+      status: 'completed',
+      files: [
+        { id: 'f4', name: 'application.yml', path: 'src/main/resources/application.yml', status: 'modified' },
+        { id: 'f5', name: 'Dockerfile', path: 'Dockerfile', status: 'modified' }
+      ]
+    },
+    {
+      id: 'local-4',
+      title: 'Refactor: Utils',
+      type: 'code',
+      status: 'pending',
+      files: [
+        { id: 'f6', name: 'StringUtils.java', path: 'src/main/common/StringUtils.java', status: 'modified' },
+        { id: 'f7', name: 'DateUtils.java', path: 'src/main/common/DateUtils.java', status: 'deleted' },
+        { id: 'f8', name: 'NumberUtils.java', path: 'src/main/common/NumberUtils.java', status: 'added' }
+      ]
+    }
+  ];
+}
+
+async function mockGetFileTree(): Promise<FileNode[]> {
+  await new Promise(r => setTimeout(r, 200));
+  return [
+    {
+      id: 'src',
+      name: 'src',
+      path: '/src',
+      type: 'folder',
+      status: 'none',
+      children: [
+        {
+          id: 'main',
+          name: 'main',
+          path: '/src/main',
+          type: 'folder',
+          status: 'none',
+          children: [
+            {
+              id: 'java',
+              name: 'java',
+              path: '/src/main/java',
+              type: 'folder',
+              status: 'none',
+              children: [
+                {
+                  id: 'com',
+                  name: 'com',
+                  path: '/src/main/java/com',
+                  type: 'folder',
+                  status: 'none',
+                  children: [
+                    {
+                      id: 'service',
+                      name: 'RetryServiceImpl.java',
+                      path: '/src/main/java/.../RetryServiceImpl.java',
+                      type: 'file',
+                      status: 'modified',
+                      stats: { added: 342, removed: 108 }
+                    },
+                     {
+                      id: 'controller',
+                      name: 'PaymentController.java',
+                      path: '/src/main/java/.../PaymentController.java',
+                      type: 'file',
+                      status: 'modified',
+                      stats: { added: 12, removed: 5 }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'pom',
+      name: 'pom.xml',
+      path: '/pom.xml',
+      type: 'file',
+      status: 'modified',
+      stats: { added: 5, removed: 0 }
+    }
+  ];
 }
 
 async function mockGetFileDiff(fileId: string): Promise<DiffLine[]> {
@@ -133,10 +251,12 @@ async function mockGetFileDiff(fileId: string): Promise<DiffLine[]> {
 async function mockGetHeatmap(): Promise<HeatmapItem[]> {
   await new Promise(r => setTimeout(r, 200));
   return [
-    { id: 'payment', name: 'payment', impact: 'high' },
-    { id: 'auth', name: 'auth', impact: 'high' },
-    { id: 'db', name: 'db', impact: 'medium' },
-    { id: 'api', name: 'api', impact: 'low' },
+    { id: '1', name: 'RetryServiceImpl.java', path: 'src/main/java/com/alipay/payment/service/impl/RetryServiceImpl.java', impact: 'high', score: 92 },
+    { id: '2', name: 'PaymentController.java', path: 'src/main/java/com/alipay/payment/web/PaymentController.java', impact: 'high', score: 88 },
+    { id: '3', name: 'OrderMapper.xml', path: 'src/main/resources/mapper/OrderMapper.xml', impact: 'medium', score: 65 },
+    { id: '4', name: 'AbstractPayment.java', path: 'src/main/java/com/alipay/payment/base/AbstractPayment.java', impact: 'medium', score: 54 },
+    { id: '5', name: 'PaymentUtils.java', path: 'src/main/java/com/alipay/payment/util/PaymentUtils.java', impact: 'low', score: 30 },
+    { id: '6', name: 'application-prod.yml', path: 'src/main/resources/application-prod.yml', impact: 'low', score: 15 },
   ];
 }
 
@@ -253,6 +373,8 @@ async function httpGetRecentRepos(): Promise<Repo[]> {
 
 async function httpGetBranches(): Promise<Branch[]> { return []; }
 async function httpGetTasks(type: string): Promise<Task[]> { return []; }
+async function httpGetLocalTasks(): Promise<Task[]> { return []; }
+async function httpGetFileTree(): Promise<FileNode[]> { return []; }
 async function httpGetFileDiff(fileId: string): Promise<DiffLine[]> { return []; }
 async function httpGetHeatmap(): Promise<HeatmapItem[]> { return []; }
 async function httpGetBlame(fileId: string): Promise<BlameInfo> { return {} as any; }

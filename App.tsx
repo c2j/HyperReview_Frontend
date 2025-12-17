@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import TitleBar from './components/TitleBar';
 import ToolBar from './components/ToolBar';
@@ -8,18 +9,19 @@ import ActionBar from './components/ActionBar';
 import StatusBar from './components/StatusBar';
 import Modal from './components/Modal';
 import OpenRepoModal from './components/OpenRepoModal';
-import ImportTaskModal from './components/ImportTaskModal';
+import NewTaskModal from './components/NewTaskModal';
 import CommandPalette from './components/CommandPalette';
 import SettingsModal from './components/SettingsModal';
 import ReviewActionModal, { ReviewType } from './components/ReviewActionModal';
 import SubmitReviewModal from './components/SubmitReviewModal';
-import CreateTaskModal from './components/CreateTaskModal';
 import TagManagerModal from './components/TagManagerModal';
 import SyncStatusModal from './components/SyncStatusModal';
 import BranchCompareModal from './components/BranchCompareModal';
 import TourGuide from './components/TourGuide';
+import { useTranslation } from './i18n';
 
 const App: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTaskId, setActiveTaskId] = useState('1');
   const [notification, setNotification] = useState<string | null>(null);
   
@@ -40,12 +42,13 @@ const App: React.FC = () => {
 
   // Modal States
   const [openRepoModalOpen, setOpenRepoModalOpen] = useState(false);
-  const [importTaskModalOpen, setImportTaskModalOpen] = useState(false);
+  const [newTaskModalOpen, setNewTaskModalOpen] = useState(false);
+  const [newTaskInitialTab, setNewTaskInitialTab] = useState<'import' | 'create'>('import');
+  
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [reviewModal, setReviewModal] = useState<{isOpen: boolean, type: ReviewType}>({isOpen: false, type: 'comment'});
-  const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
   const [tagManagerModalOpen, setTagManagerModalOpen] = useState(false);
   const [syncStatusModalOpen, setSyncStatusModalOpen] = useState(false);
   const [branchCompareModalOpen, setBranchCompareModalOpen] = useState(false);
@@ -166,9 +169,19 @@ const App: React.FC = () => {
 
   // --- Other Handlers ---
 
+  const handleNewTask = (tab: 'import' | 'create' = 'import') => {
+    setNewTaskInitialTab(tab);
+    setNewTaskModalOpen(true);
+  };
+
   const handleImportTask = (id: string) => {
     showNotification(`Task imported: ${id}`);
-    setImportTaskModalOpen(false);
+    setNewTaskModalOpen(false);
+  };
+
+  const handleCreateTask = (task: { title: string; type: string }) => {
+    showNotification(`Task created: ${task.title} (${task.type})`);
+    setNewTaskModalOpen(false);
   };
 
   const handleNavigate = (target: string) => {
@@ -186,11 +199,6 @@ const App: React.FC = () => {
     setSubmitOpen(false);
   };
 
-  const handleCreateTask = (task: { title: string; type: string }) => {
-    showNotification(`Task created: ${task.title} (${task.type})`);
-    setCreateTaskModalOpen(false);
-  };
-
   // Generalized Action Handler
   const handleAction = (msg: string) => {
     if (msg === "Global Search Activated") { setSearchOpen(true); return; }
@@ -200,7 +208,9 @@ const App: React.FC = () => {
     if (msg === "Question Mode Activated") { setReviewModal({ isOpen: true, type: 'question' }); return; }
     if (msg === "Comment Box Opened") { setReviewModal({ isOpen: true, type: 'comment' }); return; }
     if (msg.includes("Submitting Review")) { setSubmitOpen(true); return; }
-    if (msg === "Creating Local Task...") { setCreateTaskModalOpen(true); return; }
+    if (msg === "Creating Local Task...") { handleNewTask('create'); return; }
+    if (msg === "Opening New Task Modal...") { handleNewTask('import'); return; }
+    if (msg === "Importing Task...") { handleNewTask('import'); return; }
     if (msg === "Opening Tag Manager...") { setTagManagerModalOpen(true); return; }
     if (msg === "Syncing with Remote...") { setSyncStatusModalOpen(true); return; }
     if (msg === "Start Tour") { setTourOpen(true); return; }
@@ -215,7 +225,7 @@ const App: React.FC = () => {
       <ToolBar 
         onAction={handleAction} 
         onOpenRepo={() => setOpenRepoModalOpen(true)}
-        onImportTask={() => setImportTaskModalOpen(true)}
+        onNewTask={() => handleNewTask('import')}
         showLeft={showLeft}
         showRight={showRight}
         onToggleLeft={toggleLeft}
@@ -286,19 +296,24 @@ const App: React.FC = () => {
       </div>
 
       {/* --- MODALS --- */}
-      <Modal isOpen={openRepoModalOpen} onClose={() => { if(isRepoLoaded) setOpenRepoModalOpen(false); }} title="Open Repository">
+      <Modal isOpen={openRepoModalOpen} onClose={() => { if(isRepoLoaded) setOpenRepoModalOpen(false); }} title={t('modal.open_repo.step1')}>
         <OpenRepoModal onClose={() => { if(isRepoLoaded) setOpenRepoModalOpen(false); }} onOpen={handleOpenRepo} />
       </Modal>
 
-      <Modal isOpen={importTaskModalOpen} onClose={() => setImportTaskModalOpen(false)} title="Import Task">
-        <ImportTaskModal onClose={() => setImportTaskModalOpen(false)} onImport={handleImportTask} />
+      <Modal isOpen={newTaskModalOpen} onClose={() => setNewTaskModalOpen(false)} title={t('modal.new_task.title')}>
+        <NewTaskModal 
+            onClose={() => setNewTaskModalOpen(false)} 
+            onImport={handleImportTask}
+            onCreate={handleCreateTask}
+            initialTab={newTaskInitialTab}
+        />
       </Modal>
 
       <Modal isOpen={searchOpen} onClose={() => setSearchOpen(false)} title="Go to File or Command">
         <CommandPalette onClose={() => setSearchOpen(false)} onNavigate={handleNavigate} />
       </Modal>
 
-      <Modal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title="Editor Preferences">
+      <Modal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('modal.settings.title')}>
         <SettingsModal onClose={() => setSettingsOpen(false)} />
       </Modal>
 
@@ -306,23 +321,19 @@ const App: React.FC = () => {
         <ReviewActionModal type={reviewModal.type} onClose={() => setReviewModal({ ...reviewModal, isOpen: false })} onSubmit={handleReviewSubmit} />
       </Modal>
 
-      <Modal isOpen={submitOpen} onClose={() => setSubmitOpen(false)} title="Submit Review">
+      <Modal isOpen={submitOpen} onClose={() => setSubmitOpen(false)} title={t('modal.submit.title')}>
         <SubmitReviewModal onClose={() => setSubmitOpen(false)} onSubmit={handleFinalSubmit} />
       </Modal>
 
-      <Modal isOpen={createTaskModalOpen} onClose={() => setCreateTaskModalOpen(false)} title="Create Local Task">
-        <CreateTaskModal onClose={() => setCreateTaskModalOpen(false)} onCreate={handleCreateTask} />
-      </Modal>
-
-      <Modal isOpen={tagManagerModalOpen} onClose={() => setTagManagerModalOpen(false)} title="Manage Quick Tags">
+      <Modal isOpen={tagManagerModalOpen} onClose={() => setTagManagerModalOpen(false)} title={t('modal.tag_manager.title')}>
         <TagManagerModal onClose={() => setTagManagerModalOpen(false)} />
       </Modal>
 
-      <Modal isOpen={syncStatusModalOpen} onClose={() => setSyncStatusModalOpen(false)} title="Remote Sync Status">
+      <Modal isOpen={syncStatusModalOpen} onClose={() => setSyncStatusModalOpen(false)} title={t('modal.sync.title')}>
         <SyncStatusModal onClose={() => setSyncStatusModalOpen(false)} />
       </Modal>
       
-      <Modal isOpen={branchCompareModalOpen} onClose={() => { if(isRepoLoaded) setBranchCompareModalOpen(false); }} title="Branch Comparison">
+      <Modal isOpen={branchCompareModalOpen} onClose={() => { if(isRepoLoaded) setBranchCompareModalOpen(false); }} title={t('modal.branch_compare.title')}>
         <BranchCompareModal 
             currentBase={diffContext.base}
             currentHead={diffContext.head}

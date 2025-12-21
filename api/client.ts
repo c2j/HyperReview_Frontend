@@ -6,7 +6,6 @@ import type {
 } from './types';
 import { ReviewSeverity } from './types';
 
-// 在当前演示环境中默认为 true，实际项目中使用 import.meta.env.VITE_MOCK === 'true'
 const MOCK = true; 
 
 // --- Exports ---
@@ -65,65 +64,149 @@ export const openLocalRepoDialog = (): Promise<string | null> =>
 async function mockGetRecentRepos(): Promise<Repo[]> {
   await new Promise(r => setTimeout(r, 200)); 
   return [
-    { path: '~/work/payment-service', branch: 'feature/payment-retry', lastOpened: '2 mins ago' },
-    { path: '~/work/auth-center', branch: 'master', lastOpened: '1 hour ago' },
-    { path: '~/work/legacy-monolith', branch: 'hotfix/npe-fix', lastOpened: '2 days ago' },
+    { path: '~/work/hyper-review-system', branch: 'main', lastOpened: '1 min ago' },
+    { path: '~/work/payment-gateway', branch: 'feature/retry-logic', lastOpened: '10 mins ago' },
+    { path: '~/work/auth-module', branch: 'master', lastOpened: '2 days ago' },
   ];
 }
 
 async function mockGetBranches(): Promise<Branch[]> {
-  return [
-    { name: 'master' },
-    { name: 'main' },
-    { name: 'feature/payment-retry' },
-  ];
+  return [{ name: 'master' }, { name: 'main' }, { name: 'feature/full-stack-update' }];
 }
 
 async function mockGetTasks(type: 'pending' | 'watched'): Promise<Task[]> {
   if (type === 'pending') {
     return [
-      { id: '1', title: 'PR#2877 Pay Retry Refactor', status: 'active' },
-      { id: '2', title: 'PR#2871 Auth Center Update', status: 'pending', unreadCount: 1 },
+      { id: '1', title: 'PR#502 Multi-Lang Upgrade', status: 'active' },
+      { id: '2', title: 'PR#498 Security Fix', status: 'pending', unreadCount: 2 },
     ];
   }
   return [];
 }
 
 async function mockGetLocalTasks(): Promise<Task[]> {
-  return [];
+  return [
+    { id: 'L1', title: 'Performance Analysis (Py/Go)', status: 'active', type: 'code' },
+    { id: 'L2', title: 'DB Schema Audit', status: 'pending', type: 'sql' }
+  ];
 }
 
 async function mockGetFileTree(): Promise<FileNode[]> {
   return [
     {
-      id: 'src',
-      name: 'src',
-      path: '/src',
-      type: 'folder',
-      status: 'none',
+      id: 'src', name: 'src', path: '/src', type: 'folder', status: 'none',
       children: [
-        {
-          id: 'service',
-          name: 'RetryServiceImpl.java',
-          path: '/src/.../RetryServiceImpl.java',
-          type: 'file',
-          status: 'modified',
-          stats: { added: 342, removed: 108 }
-        }
+        { id: 'java', name: 'OrderService.java', path: 'src/main/OrderService.java', type: 'file', status: 'modified', stats: { added: 42, removed: 12 } },
+        { id: 'py', name: 'analyzer.py', path: 'src/scripts/analyzer.py', type: 'file', status: 'modified', stats: { added: 120, removed: 5 } },
+        { id: 'go', name: 'handler.go', path: 'src/api/handler.go', type: 'file', status: 'added', stats: { added: 250, removed: 0 } },
+      ]
+    },
+    {
+      id: 'db', name: 'db', path: '/db', type: 'folder', status: 'none',
+      children: [
+        { id: 'sql', name: 'V2_Add_Indexes.sql', path: 'db/migration/V2_Add_Indexes.sql', type: 'file', status: 'modified', stats: { added: 15, removed: 2 } },
+      ]
+    },
+    {
+      id: 'config', name: 'config', path: '/config', type: 'folder', status: 'none',
+      children: [
+        { id: 'yaml', name: 'app.yml', path: 'config/app.yml', type: 'file', status: 'modified', stats: { added: 10, removed: 1 } },
+        { id: 'md', name: 'README.md', path: 'README.md', type: 'file', status: 'modified', stats: { added: 5, removed: 0 } },
+        { id: 'ts', name: 'types.ts', path: 'src/types.ts', type: 'file', status: 'modified', stats: { added: 12, removed: 4 } },
       ]
     }
   ];
 }
 
 async function mockGetFileDiff(fileId: string): Promise<DiffLine[]> {
+  await new Promise(r => setTimeout(r, 150));
+  
+  if (fileId.endsWith('.py')) {
+    return [
+      { oldLineNumber: 1, newLineNumber: 1, content: 'import os', type: 'context' },
+      { oldLineNumber: 2, newLineNumber: 2, content: 'import sys', type: 'context' },
+      { newLineNumber: 3, content: 'import pandas as pd', type: 'added' },
+      { oldLineNumber: 10, newLineNumber: 11, content: 'def process_data(input_file):', type: 'context' },
+      { oldLineNumber: 11, content: '    data = open(input_file).read()', type: 'removed' },
+      { newLineNumber: 12, content: '    data = pd.read_csv(input_file)', type: 'added', severity: ReviewSeverity.INFO, message: 'Optimization: Used pandas for better performance' },
+      { newLineNumber: 13, content: '    return data.groupby("category").sum()', type: 'added' },
+    ];
+  }
+
+  if (fileId.endsWith('.go')) {
+    return [
+      { newLineNumber: 1, content: 'package main', type: 'added' },
+      { newLineNumber: 2, content: '', type: 'added' },
+      { newLineNumber: 3, content: 'import "fmt"', type: 'added' },
+      { newLineNumber: 4, content: '', type: 'added' },
+      { newLineNumber: 5, content: 'func main() {', type: 'added' },
+      { newLineNumber: 6, content: '    fmt.Println("HyperReview Go Handler Active")', type: 'added' },
+      { newLineNumber: 7, content: '}', type: 'added' },
+    ];
+  }
+
+  if (fileId.endsWith('.sql')) {
+    return [
+      { oldLineNumber: 1, newLineNumber: 1, content: 'CREATE TABLE orders (', type: 'context' },
+      { oldLineNumber: 2, newLineNumber: 2, content: '    id BIGINT PRIMARY KEY,', type: 'context' },
+      { newLineNumber: 3, content: '    user_id BIGINT NOT NULL,', type: 'added' },
+      { newLineNumber: 4, content: '    amount DECIMAL(18, 2),', type: 'added' },
+      { oldLineNumber: 3, content: ');', type: 'removed' },
+      { newLineNumber: 5, content: '    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP', type: 'added' },
+      { newLineNumber: 6, content: ');', type: 'added' },
+      { newLineNumber: 7, content: 'CREATE INDEX idx_user_id ON orders(user_id);', type: 'added', severity: ReviewSeverity.WARNING, message: 'Verify if redundant index exists' },
+    ];
+  }
+
+  if (fileId.endsWith('.yml') || fileId.endsWith('.yaml')) {
+    return [
+      { oldLineNumber: 1, newLineNumber: 1, content: 'server:', type: 'context' },
+      { oldLineNumber: 2, newLineNumber: 2, content: '  port: 8080', type: 'context' },
+      { oldLineNumber: 3, content: '  timeout: 5000', type: 'removed' },
+      { newLineNumber: 3, content: '  timeout: 15000', type: 'added', severity: ReviewSeverity.WARNING, message: 'Timeout increased significantly' },
+      { newLineNumber: 4, content: 'security:', type: 'added' },
+      { newLineNumber: 5, content: '  enable_cors: true', type: 'added' },
+    ];
+  }
+
+  if (fileId.endsWith('.md')) {
+    return [
+      { oldLineNumber: 1, newLineNumber: 1, content: '# Project HyperReview', type: 'context' },
+      { newLineNumber: 2, content: '', type: 'added' },
+      { newLineNumber: 3, content: '## Core Features', type: 'added' },
+      { newLineNumber: 4, content: '- **Syntax Highlighting**: Powered by PrismJS', type: 'added' },
+      { newLineNumber: 5, content: '- **Smart Checklist**: Context-aware', type: 'added' },
+    ];
+  }
+
+  if (fileId.endsWith('.ts') || fileId.endsWith('.tsx')) {
+    return [
+        { newLineNumber: 1, content: 'export interface User {', type: 'added' },
+        { newLineNumber: 2, content: '  id: string;', type: 'added' },
+        { newLineNumber: 3, content: '  name: string;', type: 'added' },
+        { newLineNumber: 4, content: '  email?: string;', type: 'added' },
+        { newLineNumber: 5, content: '}', type: 'added' },
+    ];
+  }
+
+  // Default Java
   return [
-    { oldLineNumber: 1, newLineNumber: 1, content: 'public class RetryServiceImpl {', type: 'context' },
+    { oldLineNumber: 1, newLineNumber: 1, content: 'package com.alipay.review;', type: 'context' },
+    { oldLineNumber: 2, newLineNumber: 2, content: '', type: 'context' },
+    { oldLineNumber: 3, newLineNumber: 3, content: 'import lombok.extern.slf4j.Slf4j;', type: 'context' },
+    { newLineNumber: 4, content: '@Slf4j', type: 'added' },
+    { oldLineNumber: 4, newLineNumber: 5, content: 'public class OrderService {', type: 'context' },
+    { newLineNumber: 6, content: '    public void process() {', type: 'added' },
+    { newLineNumber: 7, content: '        log.info("Processing order...");', type: 'added' },
+    { newLineNumber: 8, content: '    }', type: 'added' },
+    { oldLineNumber: 5, newLineNumber: 9, content: '}', type: 'context' },
   ];
 }
 
 async function mockGetHeatmap(): Promise<HeatmapItem[]> {
   return [
-    { id: '1', name: 'RetryServiceImpl.java', path: '.../RetryServiceImpl.java', impact: 'high', score: 92 },
+    { id: '1', name: 'OrderService.java', path: 'src/main/OrderService.java', impact: 'high', score: 92 },
+    { id: '2', name: 'handler.go', path: 'src/api/handler.go', impact: 'medium', score: 65 },
   ];
 }
 
@@ -132,61 +215,61 @@ async function mockGetBlame(fileId: string): Promise<BlameInfo> {
     author: 'alice',
     avatar: 'A',
     time: '2025-11-20 18:33',
-    prName: 'PR#2711',
+    prName: 'PR#502',
     reviewer: 'ferris',
     reviewerStatus: 'LGTM',
-    comment: 'Fixing deadlock.'
+    comment: 'Refactored for multi-language support.'
   };
 }
 
 async function mockGetReviewStats(): Promise<ReviewStats> {
   return {
-    reviewedCount: 73,
-    totalCount: 127,
-    severeCount: 12,
-    warningCount: 28,
-    pendingCount: 7,
-    estimatedTime: '11m'
+    reviewedCount: 5,
+    totalCount: 12,
+    severeCount: 1,
+    warningCount: 3,
+    pendingCount: 2,
+    estimatedTime: '25m'
   };
 }
 
 async function mockGetChecklist(): Promise<ChecklistItem[]> {
   return [
-    { id: '1', text: 'Check SQL Injection', checked: false },
+    { id: 'c1', text: 'Verify Error Handling', checked: false },
+    { id: 'c2', text: 'Check Resource Closure', checked: true },
   ];
 }
 
 async function mockGetReviewGuide(): Promise<ReviewGuideItem[]> {
-  await new Promise(r => setTimeout(r, 200));
   return [
-    { id: 'g1', category: 'security', severity: 'high', title: 'SQL 注入风险 (SQLi)', description: '检查 XML Mapper 中是否使用了 ${} 而非 #{}。', applicableExtensions: ['.java', '.xml', '.sql'] },
-    { id: 'g2', category: 'performance', severity: 'medium', title: '潜在 N+1 查询', description: '循环体内调用了 DB/RPC 接口，建议使用批量模式。', applicableExtensions: ['.java', '.ts', '.js'] },
-    { id: 'g3', category: 'logic', severity: 'high', title: '事务边界缺失', description: '涉及多表更新的操作必须标注 @Transactional。', applicableExtensions: ['.java'] },
-    { id: 'g4', category: 'style', severity: 'low', title: '魔法数字', description: '硬编码的超时时间或状态码建议提取为常量。', applicableExtensions: ['.java', '.ts', '.js', '.c', '.cpp'] },
-    { id: 'g5', category: 'performance', severity: 'high', title: '连接未关闭', description: '检查 Stream 或 HttpClient 是否在 finally 块中关闭。', applicableExtensions: ['.java', '.py'] },
-    { id: 'g6', category: 'security', severity: 'high', title: '敏感配置明文', description: '检查 .yml 或 .properties 是否存在明文密码。', applicableExtensions: ['.yml', '.yaml', '.properties', '.xml'] },
-    { id: 'g7', category: 'logic', severity: 'medium', title: '前端金额计算风险', description: '涉及支付金额的计算应放在后端，前端仅作展示。', applicableExtensions: ['.js', '.ts', '.tsx', '.jsx'] },
+    { id: 'g1', category: 'security', severity: 'high', title: 'SQL Injection Risk', description: 'Avoid string concatenation in SQL queries.', applicableExtensions: ['.java', '.xml', '.sql', '.py'] },
+    { id: 'g2', category: 'performance', severity: 'medium', title: 'Large Object Allocation', description: 'Avoid creating objects inside loops during large data processing.', applicableExtensions: ['.java', '.go', '.ts'] },
+    { id: 'g3', category: 'style', severity: 'low', title: 'Missing Documentation', description: 'Public APIs should have clear documentation comments.', applicableExtensions: ['.java', '.go', '.py', '.ts', '.md'] },
+    { id: 'g4', category: 'logic', severity: 'high', title: 'Concurrent Race Condition', description: 'Shared resources accessed without locking.', applicableExtensions: ['.go', '.java'] },
+    { id: 'g5', category: 'security', severity: 'high', title: 'Sensitive Info Leak', description: 'Do not store plain text passwords in config files.', applicableExtensions: ['.yml', '.yaml', '.properties', '.json'] },
   ];
 }
 
 async function mockGetTags(): Promise<Tag[]> {
-  return [
-    { id: 1, label: 'N+1', color: 'bg-editor-error' },
-  ];
+  return [{ id: 1, label: 'High Perf', color: 'bg-editor-success' }, { id: 2, label: 'Arch Risk', color: 'bg-editor-error' }];
 }
 
 async function mockGetCommands(): Promise<SearchResult[]> {
-  return [];
+  return [
+    { type: 'file', label: 'OrderService.java', desc: 'src/main' },
+    { type: 'file', label: 'handler.go', desc: 'src/api' },
+    { type: 'cmd', label: 'Checkout Main', desc: 'Git Command' },
+  ];
 }
 
 async function mockGetReviewTemplates(): Promise<ReviewTemplate[]> {
-  return [];
+  return [{ id: 't1', label: 'Logic Opt', content: 'Suggest refactoring this logic using Strategy pattern.' }];
 }
 
 async function mockGetQualityGates(): Promise<QualityGate[]> {
-  return [];
+  return [{ id: 'q1', name: 'SonarQube', status: 'passed', message: '0 Issues' }];
 }
 
 async function mockOpenLocalRepoDialog(): Promise<string | null> {
-  return "/home/user/repo";
+  return "/home/dev/project";
 }

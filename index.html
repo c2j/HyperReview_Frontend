@@ -5,15 +5,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HyperReview</title>
-    <!-- 
-      使用 Tailwind CSS CDN 以确保样式和自定义配置正确加载。
-      本地 tailwindcss.js 可能因文件完整性或加载顺序问题导致配置失效。
-    -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 如果需要尝试本地文件，请确保文件完整并通过标准 HTTP 服务加载 -->
-    <!-- <script src="./tailwindcss.js"></script> -->
-    
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- PrismJS Theme -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    
+    <!-- PrismJS Core and Languages (Global) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+
     <script>
       tailwind.config = {
         theme: {
@@ -47,32 +56,39 @@
         color: #cccccc;
         overflow: hidden;
       }
-      /* Custom Scrollbar for that IDE feel */
-      ::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar { width: 10px; height: 10px; }
+      ::-webkit-scrollbar-track { background: #1e1e1e; }
+      ::-webkit-scrollbar-thumb { background: #424242; }
+      ::-webkit-scrollbar-thumb:hover { background: #4f4f4f; }
+
+      /* Prism Overrides to match our theme */
+      pre[class*="language-"], code[class*="language-"] {
+        background: transparent !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        text-shadow: none !important;
+        font-size: 14px !important;
+        white-space: pre !important; /* CRITICAL: Ensure indentation spaces are preserved */
       }
-      ::-webkit-scrollbar-track {
-        background: #1e1e1e;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #424242;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #4f4f4f;
-      }
+      .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #6a9955 !important; }
+      .token.punctuation { color: #d4d4d4 !important; }
+      .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #b5cea8 !important; }
+      .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #ce9178 !important; }
+      .token.operator, .token.entity, .token.url, .language-css .string, .style .string { color: #d4d4d4 !important; }
+      .token.atrule, .token.attr-value, .token.keyword { color: #569cd6 !important; }
+      .token.function, .token.class-name { color: #dcdcaa !important; }
+      .token.regex, .token.important, .token.variable { color: #d16969 !important; }
     </style>
     <script type="importmap">
     {
       "imports": {
-        "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
-        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-        "react/": "https://esm.sh/react@^19.2.3/",
-        "react": "https://esm.sh/react@^19.2.3"
+        "lucide-react": "https://esm.sh/lucide-react@0.469.0",
+        "react-dom/": "https://esm.sh/react-dom@19.0.0/",
+        "react/": "https://esm.sh/react@19.0.0/",
+        "react": "https://esm.sh/react@19.0.0"
       }
     }
     </script>
-    <!-- 确保加载 React 入口文件 -->
     <script type="module" src="./index.tsx"></script>
   </head>
   <body>

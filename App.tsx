@@ -34,7 +34,7 @@ const App: React.FC = () => {
   });
 
   // Current File Context
-  const [activeFilePath, setActiveFilePath] = useState('src/main/java/com/alipay/payment/service/impl/RetryServiceImpl.java');
+  const [activeFilePath, setActiveFilePath] = useState('src/main/OrderService.java');
   const activeFileExtension = useMemo(() => {
     const parts = activeFilePath.split('.');
     return parts.length > 1 ? `.${parts.pop()}` : '';
@@ -222,7 +222,7 @@ const App: React.FC = () => {
         )}
 
         <div className="flex-1 min-w-0 h-full border-r border-editor-line relative pb-[56px] flex flex-col">
-          <DiffView isMaximized={isMaximized} toggleMaximize={toggleMaximize} onAction={handleAction} diffContext={diffContext} />
+          <DiffView isMaximized={isMaximized} toggleMaximize={toggleMaximize} onAction={handleAction} diffContext={diffContext} activeFilePath={activeFilePath} />
           <ActionBar onAction={handleAction} />
         </div>
 

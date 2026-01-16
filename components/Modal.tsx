@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
@@ -21,7 +22,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-[2px] animate-fade-in">
+    <div className="fixed top-0 right-0 bottom-0 left-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-[2px] animate-fade-in">
       <div className="bg-editor-bg border border-editor-line shadow-2xl rounded-lg w-[500px] max-w-[90vw] overflow-hidden flex flex-col max-h-[80vh] animate-scale-in">
         <div className="flex items-center justify-between px-4 py-3 border-b border-editor-line bg-editor-sidebar">
           <span className="font-bold text-sm text-editor-fg tracking-wide">{title}</span>

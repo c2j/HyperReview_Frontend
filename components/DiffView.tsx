@@ -354,7 +354,7 @@ const DiffView: React.FC<DiffViewProps> = ({ isMaximized, toggleMaximize, onActi
 
       <div className="flex-1 overflow-y-auto overflow-x-auto font-mono text-[14px] leading-[22px] relative" onClick={() => setContextMenu(prev => ({...prev, visible: false}))}>
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-editor-bg/80 z-30">
+          <div className="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-editor-bg/80 z-30">
             <div className="flex flex-col items-center gap-3">
               <Loader2 size={32} className="animate-spin text-editor-accent" />
               <span className="text-xs text-gray-400">Loading diff...</span>
@@ -401,7 +401,7 @@ const DiffView: React.FC<DiffViewProps> = ({ isMaximized, toggleMaximize, onActi
                             </div>
                         )}
                         {(viewMode === 'diff' || viewMode === 'new') && line.severity === ReviewSeverity.WARNING && <div className="absolute left-0 bottom-0 w-full h-[2px] bg-orange-500/30"></div>}
-                        {(viewMode === 'diff' || viewMode === 'new') && line.severity === ReviewSeverity.ERROR && <div className="absolute inset-0 border border-editor-error/30 bg-editor-error/5 pointer-events-none"></div>}
+                        {(viewMode === 'diff' || viewMode === 'new') && line.severity === ReviewSeverity.ERROR && <div className="absolute top-0 right-0 bottom-0 left-0 border border-editor-error/30 bg-editor-error/5 pointer-events-none"></div>}
                     </div>
                     {line.severity && !isFoldedPlaceholder && (
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">

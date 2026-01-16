@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { RefreshCw, CheckCircle2, GitBranch, ArrowDown, ArrowUp, Terminal } from 'lucide-react';
 import { useTranslation } from '../i18n';
@@ -13,8 +14,8 @@ const SyncStatusModal: React.FC<SyncStatusModalProps> = ({ onClose }) => {
 
   useEffect(() => {
     const sequence = [
-        "Fetching origin...",
-        "Pruning obsolete refs...",
+        t('modal.sync.fetching'),
+        t('modal.sync.pruning'),
         "remote: Enumerating objects: 42, done.",
         "remote: Compressing objects: 100% (28/28), done.",
         "remote: Total 42 (delta 14), reused 0 (delta 0), pack-reused 0",
@@ -25,7 +26,7 @@ const SyncStatusModal: React.FC<SyncStatusModalProps> = ({ onClose }) => {
         "Fast-forward",
         " src/main/java/PaymentService.java | 12 ++++",
         " 1 file changed, 12 insertions(+)",
-        "Sync completed successfully."
+        t('modal.sync.success')
     ];
     
     let i = 0;
@@ -40,7 +41,7 @@ const SyncStatusModal: React.FC<SyncStatusModalProps> = ({ onClose }) => {
     }, 400);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [t]);
 
   return (
     <div className="flex flex-col gap-0">
@@ -65,7 +66,7 @@ const SyncStatusModal: React.FC<SyncStatusModalProps> = ({ onClose }) => {
            {logs.map((log, i) => (
                <div key={i} className="mb-1 whitespace-pre-wrap break-all">
                    <span className="text-gray-600 mr-2 select-none">$</span>
-                   <span className={log.includes("done") || log.includes("success") ? "text-editor-success" : ""}>{log}</span>
+                   <span className={log.includes("done") || log.includes(t('modal.sync.success')) ? "text-editor-success" : ""}>{log}</span>
                </div>
            ))}
            {syncing && <div className="animate-pulse text-editor-accent">_</div>}

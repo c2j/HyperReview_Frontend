@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, Upload, GitBranch, ChevronDown, Tag, PanelLeft, PanelRight, ArrowLeft, Loader2, Plus } from 'lucide-react';
+import { FolderOpen, GitBranch, ChevronDown, Tag, PanelLeft, PanelRight, ArrowLeft, Loader2, Plus, Globe, Send, Plug, Cpu } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { getTags } from '../api/client';
 import type { Tag as TagType } from '../api/types';
@@ -14,6 +14,7 @@ interface ToolBarProps {
   onToggleLeft?: () => void;
   onToggleRight?: () => void;
   diffContext?: { base: string; head: string };
+  mode: 'local' | 'remote';
 }
 
 const ToolBar: React.FC<ToolBarProps> = ({ 
@@ -24,7 +25,8 @@ const ToolBar: React.FC<ToolBarProps> = ({
   showRight = true,
   onToggleLeft,
   onToggleRight,
-  diffContext
+  diffContext,
+  mode
 }) => {
   const { t } = useTranslation();
   const [tags, setTags] = useState<TagType[]>([]);
@@ -35,8 +37,6 @@ const ToolBar: React.FC<ToolBarProps> = ({
     getTags().then(setTags).catch(console.error).finally(() => setLoadingTags(false));
   }, []);
 
-  // Helper to map generic color class to specific toolbar style
-  // Assuming color is like 'bg-editor-error'
   const getTagStyle = (bgClass: string) => {
       if (bgClass.includes('error')) return 'bg-editor-error/20 text-editor-error border-editor-error/30 hover:bg-editor-error/30';
       if (bgClass.includes('warning')) return 'bg-editor-warning/20 text-editor-warning border-editor-warning/30 hover:bg-editor-warning/30';
@@ -46,114 +46,110 @@ const ToolBar: React.FC<ToolBarProps> = ({
   };
 
   return (
-    <div id="tour-toolbar" className="h-[52px] bg-editor-bg border-b border-editor-line flex flex-col shrink-0 z-40">
-      {/* Top Action Row */}
-      <div className="flex-1 flex items-center px-2 gap-3 text-xs">
+    <div id="tour-toolbar" className="h-[56px] bg-editor-bg border-b border-editor-line flex flex-col shrink-0 z-40">
+      <div className="flex-1 flex items-center px-3 gap-4 text-xs">
         
-        {/* Left Toggle */}
-        <button 
-            onClick={onToggleLeft}
-            className={`p-1.5 rounded transition-colors ${showLeft ? 'bg-editor-line text-white' : 'text-gray-500 hover:bg-editor-line hover:text-gray-300'}`}
-            title="Toggle Left Panel"
-        >
-            <PanelLeft size={16} />
+        <button onClick={onToggleLeft} className={`p-1.5 rounded transition-all hover:scale-105 active:scale-95 ${showLeft ? 'bg-editor-line text-white shadow-inner' : 'text-gray-500 hover:bg-editor-line'}`}>
+            <PanelLeft size={18} />
         </button>
 
         <div className="h-4 w-[1px] bg-editor-line"></div>
 
+        {/* Dynamic Action Group Based on Mode */}
         <div className="flex items-center gap-2">
-            <button 
-                onClick={onOpenRepo ? onOpenRepo : () => onAction("Opening Repository Picker...")}
-                className="flex items-center gap-1.5 px-3 py-1 bg-editor-accent/10 hover:bg-editor-accent/20 text-editor-accent rounded transition-colors active:scale-95">
-                <FolderOpen size={14} /> {t('toolbar.open_repo')}
-            </button>
-            <button 
-                onClick={onNewTask ? onNewTask : () => onAction("Opening New Task Modal...")}
-                className="flex items-center gap-1.5 px-3 py-1 bg-editor-line hover:bg-editor-line/80 text-editor-fg rounded transition-colors active:scale-95">
-                <Plus size={14} /> {t('toolbar.new_task')}
-            </button>
+            {mode === 'local' ? (
+                <>
+                    <button onClick={onOpenRepo} className="flex items-center gap-1.5 px-4 h-8 bg-editor-accent text-white rounded-lg transition-all hover:bg-blue-600 active:scale-95 font-bold shadow-md shadow-editor-accent/20">
+                        <FolderOpen size={14} /> {t('toolbar.open_repo')}
+                    </button>
+                    <button onClick={onNewTask} className="flex items-center gap-1.5 px-4 h-8 bg-editor-line hover:bg-editor-line/80 text-editor-fg rounded-lg transition-all active:scale-95 font-bold">
+                        <Plus size={14} /> {t('toolbar.new_task')}
+                    </button>
+                </>
+            ) : (
+                <>
+                    <button onClick={() => onAction("Gerrit Import Dialog")} className="flex items-center gap-1.5 px-4 h-8 bg-purple-600 text-white rounded-lg transition-all hover:bg-purple-500 active:scale-95 font-bold shadow-md shadow-purple-900/40">
+                        <Plug size={14} /> {t('toolbar.gerrit_import')}
+                    </button>
+                    <button onClick={() => onAction("Gerrit Server Settings")} className="flex items-center gap-1.5 px-3 h-8 bg-editor-line hover:bg-editor-line/80 text-editor-fg rounded-lg transition-all active:scale-95">
+                        <Globe size={14} />
+                    </button>
+                </>
+            )}
         </div>
 
         <div className="h-4 w-[1px] bg-editor-line"></div>
 
+        {/* Global Action Selector */}
         <div className="flex items-center gap-2">
-            <span className="text-gray-500 hidden xl:inline">{t('toolbar.submit_to')}</span>
-            <button 
-                onClick={() => onAction("Selected Target: CodeArts")}
-                className="flex items-center gap-1 px-2 py-0.5 bg-editor-line rounded text-white hover:bg-gray-700 transition-colors">
-                CodeArts <ChevronDown size={12} />
-            </button>
+            <span className="text-gray-500 hidden xl:inline font-medium uppercase text-[10px] tracking-widest">{t('toolbar.submit_to')}</span>
+            <div className="flex rounded-lg overflow-hidden border border-editor-line">
+                <button 
+                    className={`flex items-center gap-1.5 px-3 h-8 text-white transition-all font-black text-[10px] ${mode === 'remote' ? 'bg-purple-900/50 hover:bg-purple-800' : 'bg-editor-line hover:bg-gray-700'}`}>
+                    {mode === 'remote' ? 'GERRIT' : 'CODEARTS'}
+                </button>
+                <button className="bg-black/20 px-2 hover:bg-black/40 transition-colors border-l border-editor-line">
+                    <ChevronDown size={12} className="text-gray-500" />
+                </button>
+            </div>
         </div>
 
         <div className="flex-1"></div>
 
-        <div className="flex items-center gap-2 overflow-hidden">
-             <span className="text-gray-500 hidden lg:inline shrink-0">{t('toolbar.quick_tags')}</span>
-             
-             {loadingTags && <Loader2 size={12} className="animate-spin text-gray-500" />}
-
-             <div className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden mask-linear-fade">
-                {tags.slice(0, 3).map(tag => (
-                     <span 
-                        key={tag.id}
-                        onClick={() => onAction(`Filter: ${tag.label}`)}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded border cursor-pointer text-[11px] transition-colors whitespace-nowrap ${getTagStyle(tag.color)}`}>
-                        <Tag size={10} /> {tag.label}
+        {/* Tags and AI */}
+        <div className="flex items-center gap-3 overflow-hidden">
+             <div className="flex items-center gap-2 bg-editor-success/5 px-2.5 py-1 rounded-full border border-editor-success/20 animate-pulse cursor-pointer hover:bg-editor-success/10" onClick={() => onAction("AI Insights")}>
+                 <Cpu size={14} className="text-editor-success" />
+                 <span className="text-[10px] font-black text-editor-success">AI ACTIVE</span>
+             </div>
+             <div className="h-4 w-[1px] bg-editor-line"></div>
+             <div className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden mask-linear-fade pr-4">
+                {tags.map(tag => (
+                     <span key={tag.id} onClick={() => onAction(`Filter: ${tag.label}`)} className={`flex items-center gap-1.5 px-3 h-7 rounded-full border cursor-pointer text-[11px] font-bold transition-all whitespace-nowrap active:scale-90 ${getTagStyle(tag.color)}`}>
+                        {tag.label}
                     </span>
                 ))}
              </div>
-
-             <span 
-                onClick={() => onAction("Opening Tag Manager...")}
-                className="flex items-center gap-1 px-2 py-0.5 bg-editor-line text-gray-400 rounded cursor-pointer text-[11px] hover:text-white transition-colors shrink-0">
-                <Tag size={10} /> {t('toolbar.manage')}
-             </span>
+             <button onClick={() => onAction("Opening Tag Manager...")} className="p-1.5 bg-editor-line text-gray-500 rounded-full hover:text-white transition-colors">
+                <Plus size={14} />
+             </button>
         </div>
 
-        <div className="h-4 w-[1px] bg-editor-line ml-1"></div>
+        <div className="h-4 w-[1px] bg-editor-line"></div>
 
-        {/* Right Toggle */}
-        <button 
-            onClick={onToggleRight}
-            className={`p-1.5 rounded transition-colors ${showRight ? 'bg-editor-line text-white' : 'text-gray-500 hover:bg-editor-line hover:text-gray-300'}`}
-            title="Toggle Right Panel"
-        >
-            <PanelRight size={16} />
+        <button onClick={onToggleRight} className={`p-1.5 rounded transition-all hover:scale-105 active:scale-95 ${showRight ? 'bg-editor-line text-white shadow-inner' : 'text-gray-500 hover:bg-editor-line'}`}>
+            <PanelRight size={18} />
         </button>
-
       </div>
 
-      {/* Bottom Info Row */}
-      <div className="h-[24px] bg-editor-sidebar flex items-center px-4 gap-4 text-[11px] text-gray-400 border-t border-editor-line">
-        <div className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors" onClick={() => onAction("Navigating to /home/lead/payment-service")}>
-            <span className="text-gray-500">{t('toolbar.current_repo')}</span>
-            <span className="text-editor-fg font-medium">/home/lead/payment-service</span>
+      {/* Mode-Specific Context Row */}
+      <div className={`h-[24px] flex items-center px-4 gap-4 text-[10px] border-t border-editor-line transition-all duration-700 ${mode === 'remote' ? 'bg-purple-950/40 text-purple-300' : 'bg-editor-sidebar text-gray-500'}`}>
+        <div className="flex items-center gap-2 group cursor-pointer">
+            <span className="opacity-60 font-bold uppercase tracking-tighter">{mode === 'remote' ? 'Server:' : t('toolbar.current_repo')}</span>
+            <span className="font-mono group-hover:text-white transition-colors">{mode === 'remote' ? 'gerrit.corp.internal' : '/home/lead/payment-service'}</span>
         </div>
         
-        {/* Dynamic Branch Display */}
         {diffContext && (
-            <div className="flex items-center gap-1 text-editor-accent cursor-pointer hover:text-blue-300 transition-colors bg-editor-line/30 px-2 rounded" onClick={() => onAction("Switching Branch...")}>
+            <div className={`flex items-center gap-2 font-black px-2 py-0.5 rounded ${mode === 'remote' ? 'bg-purple-500/20 text-purple-200' : 'bg-editor-line/50 text-editor-accent'}`}>
                 <GitBranch size={10} />
-                <span className="text-editor-error/80 truncate max-w-[100px]">{diffContext.base}</span>
-                <ArrowLeft size={10} className="text-gray-500" />
-                <span className="text-editor-success/80 truncate max-w-[100px]">{diffContext.head}</span>
-            </div>
-        )}
-        {!diffContext && (
-            <div className="flex items-center gap-1 text-editor-accent cursor-pointer hover:text-blue-300 transition-colors" onClick={() => onAction("Switching Branch...")}>
-                <GitBranch size={10} />
-                <span>feature/payment-retry</span>
+                <span className="truncate max-w-[120px]">{diffContext.base}</span>
+                <ArrowLeft size={10} className="opacity-50" />
+                <span className="truncate max-w-[120px]">{diffContext.head}</span>
             </div>
         )}
 
-        <div className="flex items-center gap-1 px-1.5 bg-editor-line rounded text-gray-300 cursor-pointer hover:bg-gray-600 transition-colors" onClick={() => onAction("Showing Diff Stats")}>
-            <span>3c9fa1b</span>
-            <span className="text-editor-error">▼12</span>
-            <span className="text-editor-success">↑3</span>
-        </div>
         <div className="flex-1"></div>
-        <div className="cursor-pointer hover:text-white transition-colors" onClick={() => onAction("Listing 127 pending files")}>
-            <span className="text-white font-bold">127</span> {t('toolbar.files_pending')}
+        <div className="flex items-center gap-4">
+             {mode === 'remote' && (
+                 <div className="flex items-center gap-2">
+                     <span className="text-[9px] bg-purple-600/40 px-2 rounded-full font-black text-white">#12345</span>
+                     <span className="font-black text-purple-400">PS3</span>
+                 </div>
+             )}
+             <div className="flex items-center gap-1 font-bold group cursor-pointer" onClick={() => onAction("Listing pending files")}>
+                <span className={`transition-colors ${mode === 'remote' ? 'text-purple-400 group-hover:text-white' : 'text-editor-accent group-hover:text-white'}`}>127</span>
+                <span className="opacity-60 uppercase tracking-widest text-[9px]">{t('toolbar.files_pending')}</span>
+             </div>
         </div>
       </div>
     </div>

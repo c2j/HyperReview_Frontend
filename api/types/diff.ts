@@ -14,4 +14,6 @@ export interface DiffLine {
   message?: string;
   isFoldPlaceholder?: boolean; // UI state helper
   onClick?: () => void; // UI handler helper
+  // Added isDraft property to support marking specific diff lines as draft comments
+  isDraft?: boolean;
 }

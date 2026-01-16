@@ -4,7 +4,8 @@ export interface FileNode {
   name: string;
   path: string;
   type: 'file' | 'folder';
-  status: 'modified' | 'added' | 'deleted' | 'none';
+  /* Updated status to include 'renamed' to accommodate Gerrit changes and task files */
+  status: 'modified' | 'added' | 'deleted' | 'renamed' | 'none';
   children?: FileNode[];
   stats?: {
     added: number;

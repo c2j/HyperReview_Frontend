@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tag, X, Plus, Circle, Loader2 } from 'lucide-react';
 import { useTranslation } from '../i18n';
@@ -47,7 +48,7 @@ const TagManagerModal: React.FC<TagManagerModalProps> = ({ onClose }) => {
             {loading ? (
                 <div className="flex flex-col items-center justify-center h-[100px] gap-2 text-gray-500">
                     <Loader2 size={24} className="animate-spin text-editor-accent" />
-                    <span className="text-xs">Loading tags...</span>
+                    <span className="text-xs">{t('modal.tag_manager.loading')}</span>
                 </div>
             ) : (
                 <>

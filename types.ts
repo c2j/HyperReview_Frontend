@@ -1,3 +1,4 @@
+
 export enum ReviewSeverity {
   ERROR = 'ERROR',
   WARNING = 'WARNING',
@@ -12,6 +13,8 @@ export interface DiffLine {
   type: 'added' | 'removed' | 'context' | 'header';
   severity?: ReviewSeverity;
   message?: string;
+  // Added isDraft property for consistency across the application's diff line representations
+  isDraft?: boolean;
 }
 
 export interface FileNode {
@@ -19,7 +22,8 @@ export interface FileNode {
   name: string;
   path: string;
   type: 'file' | 'folder';
-  status: 'modified' | 'added' | 'deleted';
+  /* Updated status to include 'renamed' and 'none' to stay consistent with api/types/file-tree.ts */
+  status: 'modified' | 'added' | 'deleted' | 'renamed' | 'none';
   children?: FileNode[];
   stats?: {
     added: number;
